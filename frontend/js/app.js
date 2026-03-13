@@ -2,7 +2,7 @@
  * Orbit AI — Main App Router & Shared Utilities
  */
 
-const API = ''; 
+const API = 'https://orbitz.onrender.com'; 
 let ws = null;
 let wsReconnectTimer = null;
 let currentUser = null;
