@@ -3,6 +3,12 @@
  */
 
 const API = 'https://orbitz.onrender.com'; 
+
+function getFullAvatarUrl(path) {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return API + (path.startsWith('/') ? '' : '/') + path;
+}
 let ws = null;
 let wsReconnectTimer = null;
 let currentUser = null;

@@ -160,7 +160,7 @@ function renderChatList() {
         
         return `
             <div class="chat-item ${isActive ? 'active' : ''}" onclick="selectChat(${chat.id})">
-                <img class="avatar" src="${chat.avatar_path || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'16\'%3E${chat.name[0]}%3C/text%3E%3C/svg%3E'}" id="avatar-${chat.id}">
+                <img class="avatar" src="${getFullAvatarUrl(chat.avatar_path) || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'16\'%3E${chat.name[0]}%3C/text%3E%3C/svg%3E'}" id="avatar-${chat.id}">
                 <div class="chat-info">
                     <div class="chat-name">${chat.name}</div>
                     <div class="chat-preview">${chat.last_message || 'No messages'}</div>
@@ -187,7 +187,7 @@ async function selectChat(chatId) {
     view.innerHTML = `
         <div class="chat-view-header" style="display:flex; justify-content:space-between; align-items:center">
             <div style="display:flex; align-items:center; gap:12px">
-                <img class="avatar" src="${chat.avatar_path || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'12\'%3E${chat.name[0]}%3C/text%3E%3C/svg%3E'}">
+                <img class="avatar" src="${getFullAvatarUrl(chat.avatar_path) || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'12\'%3E${chat.name[0]}%3C/text%3E%3C/svg%3E'}">
                 <div>
                     <div class="chat-name" style="font-size:16px">${chat.name}</div>
                     <div style="font-size:12px; color:var(--text-secondary)">${chat.type.toUpperCase()} ${chat.username ? `• @${chat.username}` : ''}</div>
@@ -289,7 +289,7 @@ async function refreshMyProfile() {
         const me = res.me;
         container.innerHTML = `
             <div class="my-profile-card">
-                <img src="${me.avatar_path || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'16\'%3E${me.first_name[0]}%3C/text%3E%3C/svg%3E'}" class="me-avatar">
+                <img src="${getFullAvatarUrl(me.avatar_path) || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'16\'%3E${me.first_name[0]}%3C/text%3E%3C/svg%3E'}" class="me-avatar">
                 <div class="me-info">
                     <div class="me-name">${me.first_name} ${me.last_name || ''}</div>
                     <div class="me-username">@${me.username || 'No Username'}</div>
@@ -324,9 +324,9 @@ async function fetchMissingAvatars(accountId) {
     for (const chat of chatsToFetch) {
         const res = await apiFetch(`/chats/avatar/${chat.id}?account_id=${accountId}`);
         if (res && res.path) {
-            chat.avatar_path = res.path;
+            chat.avatar_path = getFullAvatarUrl(res.path);
             const img = document.getElementById(`avatar-${chat.id}`);
-            if (img) img.src = res.path;
+            if (img) img.src = chat.avatar_path;
         }
         await new Promise(r => setTimeout(r, 200)); // Rate limit protection
     }
@@ -352,7 +352,7 @@ async function showUserProfile(userId) {
             const p = res.profile;
             const initial = p.first_name ? p.first_name[0] : '?';
             const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23222'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='16'%3E" + initial + "%3C/text%3E%3C/svg%3E";
-            const avatarSrc = p.avatar_path || defaultAvatar;
+            const avatarSrc = getFullAvatarUrl(p.avatar_path) || defaultAvatar;
 
             let html = '<div style="padding: 32px 16px 24px 16px; text-align: center; border-bottom: 1px solid var(--border-glass)">';
             html += '<img src="' + avatarSrc + '" style="width: 88px; height: 88px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(0,0,0,0.3);">';

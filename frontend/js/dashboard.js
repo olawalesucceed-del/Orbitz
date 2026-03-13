@@ -168,7 +168,7 @@ async function refreshAccountPicker() {
         const me = res.me;
         container.innerHTML = `
             <div class="dash-profile-pill">
-                <img src="${me.avatar_path || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'16\'%3E${me.first_name[0]}%3C/text%3E%3C/svg%3E'}" class="pill-avatar">
+                <img src="${getFullAvatarUrl(me.avatar_path) || 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 48 48\'%3E%3Crect width=\'48\' height=\'48\' fill=\'%23333\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%23666\' font-size=\'16\'%3E${me.first_name[0]}%3C/text%3E%3C/svg%3E'}" class="pill-avatar">
                 <div class="pill-info">
                     <div class="pill-name">${me.first_name}</div>
                     <div class="pill-status">${me.username ? '@'+me.username : 'Active'}</div>
