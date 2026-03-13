@@ -1,0 +1,18 @@
+# Virtual environment
+backend/venv/
+*.pyc
+__pycache__/
+
+# Telegram session (contains auth — keep private)
+*.session
+*.session-journal
+
+# Environment secrets
+backend/.env
+
+# Database
+backend/*.db
+
+# OS
+.DS_Store
+Thumbs.db
