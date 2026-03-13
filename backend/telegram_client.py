@@ -797,12 +797,23 @@ class TelegramClientManager:
             formatted = []
             for m in msgs:
                 if not m.text: continue
+                
+                sender_name = "Unknown"
+                if m.sender:
+                    if hasattr(m.sender, 'title'):
+                        sender_name = m.sender.title
+                    elif hasattr(m.sender, 'first_name'):
+                        sender_name = f"{m.sender.first_name or ''} {m.sender.last_name or ''}".strip()
+                elif m.out:
+                    sender_name = "Me"
+                    
                 formatted.append({
                     "id": m.id,
                     "content": m.text,
                     "direction": "sent" if m.out else "received",
                     "sent_at": m.date.isoformat() if m.date else None,
-                    "sender_id": m.sender_id
+                    "sender_id": m.sender_id,
+                    "sender_name": sender_name
                 })
             
             return {"success": True, "messages": formatted[::-1]} # Return in chronological order

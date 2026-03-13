@@ -298,6 +298,7 @@ function renderMessages(msgs) {
 
     flow.innerHTML = msgs.map(m => `
         <div class="msg-bubble ${m.direction === 'sent' ? 'msg-out' : 'msg-in'}">
+            ${m.direction === 'received' && m.sender_name && m.sender_name !== 'Unknown' ? `<div style="font-size: 11px; font-weight: 700; color: var(--accent-primary); margin-bottom: 4px; opacity: 0.9;">${m.sender_name}</div>` : ''}
             <div>${m.content}</div>
             <div class="msg-time">${new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
