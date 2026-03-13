@@ -213,6 +213,15 @@ async function selectChat(chatId) {
                     <div style="padding:20px; text-align:center"><div class="spinner"></div></div>
                 </div>
             </div>
+            <div class="chat-members-panel" id="user-profile-panel" style="display:none; border-left: 1px solid var(--border-glass);">
+                <div class="members-header" style="display:flex; justify-content:space-between; align-items:center">
+                    <span>Entity Profile</span>
+                    <button class="btn btn-ghost btn-sm" style="padding: 2px 6px; border: none; font-size: 14px;" onclick="closeUserProfile()">✕</button>
+                </div>
+                <div class="members-list" id="user-profile-content">
+                    <div style="padding:20px; text-align:center"><div class="spinner"></div></div>
+                </div>
+            </div>
         </div>
     `;
 
@@ -220,6 +229,9 @@ async function selectChat(chatId) {
 }
 
 async function toggleMembers(chatId) {
+    const profilePanel = document.getElementById('user-profile-panel');
+    if (profilePanel) profilePanel.style.display = 'none';
+
     const panel = document.getElementById('members-panel');
     if (!panel) return;
     
@@ -298,7 +310,7 @@ function renderMessages(msgs) {
 
     flow.innerHTML = msgs.map(m => `
         <div class="msg-bubble ${m.direction === 'sent' ? 'msg-out' : 'msg-in'}">
-            ${m.direction === 'received' && m.sender_name && m.sender_name !== 'Unknown' ? `<div style="font-size: 11px; font-weight: 700; color: var(--accent-primary); margin-bottom: 4px; opacity: 0.9;">${m.sender_name}</div>` : ''}
+            ${m.direction === 'received' && m.sender_name && m.sender_name !== 'Unknown' ? `<div style="font-size: 11px; font-weight: 700; color: var(--accent-primary); margin-bottom: 4px; opacity: 0.9; cursor: pointer;" onclick="showUserProfile(${m.sender_id})">${m.sender_name}</div>` : ''}
             <div>${m.content}</div>
             <div class="msg-time">${new Date(m.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
@@ -318,4 +330,61 @@ async function fetchMissingAvatars(accountId) {
         }
         await new Promise(r => setTimeout(r, 200)); // Rate limit protection
     }
+}
+
+async function showUserProfile(userId) {
+    const membersPanel = document.getElementById('members-panel');
+    if (membersPanel) membersPanel.style.display = 'none';
+    
+    const panel = document.getElementById('user-profile-panel');
+    if (!panel) return;
+    
+    panel.style.display = 'block';
+    const content = document.getElementById('user-profile-content');
+    content.innerHTML = '<div style="padding:40px; text-align:center"><div class="spinner"></div></div>';
+    
+    const accountId = getChatAccountId();
+    if (!accountId) return;
+
+    try {
+        const res = await apiFetch(`/chats/user/${userId}?account_id=${accountId}`);
+        if (res && res.success && res.profile) {
+            const p = res.profile;
+            const initial = p.first_name ? p.first_name[0] : '?';
+            const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%23222'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23666' font-size='16'%3E" + initial + "%3C/text%3E%3C/svg%3E";
+            const avatarSrc = p.avatar_path || defaultAvatar;
+
+            let html = '<div style="padding: 32px 16px 24px 16px; text-align: center; border-bottom: 1px solid var(--border-glass)">';
+            html += '<img src="' + avatarSrc + '" style="width: 88px; height: 88px; border-radius: 50%; object-fit: cover; margin-bottom: 16px; border: 2px solid rgba(255,255,255,0.1); box-shadow: 0 8px 16px rgba(0,0,0,0.3);">';
+            html += '<div style="font-size: 18px; font-weight: 800; color: var(--text-white)">' + (p.first_name || '') + ' ' + (p.last_name || '') + '</div>';
+            
+            if (p.username) {
+                html += '<div style="font-size: 13px; color: var(--accent-primary); margin-top: 6px; font-weight:600">@' + p.username + '</div>';
+            }
+            if (p.phone) {
+                html += '<div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">' + p.phone + '</div>';
+            }
+            html += '</div>';
+
+            if (p.about) {
+                html += '<div style="padding: 24px 20px;">';
+                html += '<div style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;">Bio</div>';
+                html += '<div style="font-size: 14px; color: var(--text-primary); line-height: 1.6; white-space: pre-wrap;">' + p.about + '</div>';
+                html += '</div>';
+            } else {
+                html += '<div style="padding: 24px 20px; text-align:center; color: var(--text-muted); font-size: 13px; font-style: italic;">No bio available.</div>';
+            }
+            
+            content.innerHTML = html;
+        } else {
+            content.innerHTML = '<div style="padding:40px 20px; color:var(--danger); font-size:13px; text-align:center">' + (res?.error || 'Failed to load profile.') + '</div>';
+        }
+    } catch (e) {
+        content.innerHTML = '<div style="padding:40px 20px; color:var(--danger); font-size:13px; text-align:center">Error loading profile.</div>';
+    }
+}
+
+function closeUserProfile() {
+    const panel = document.getElementById('user-profile-panel');
+    if (panel) panel.style.display = 'none';
 }

@@ -863,6 +863,51 @@ class TelegramClientManager:
         finally:
             db.close()
 
+    async def get_user_profile(self, account_id: int, user_id: int):
+        from telethon.tl.functions.users import GetFullUserRequest
+        db = SessionLocal()
+        try:
+            client = await self.get_client(db, account_id)
+            if not client: return {"success": False, "error": "Not logged in"}
+            
+            # Fetch full user details
+            entity = await client.get_input_entity(user_id)
+            full_user = await client(GetFullUserRequest(entity))
+            user = full_user.user
+            
+            # Download avatar
+            avatar_path = None
+            try:
+                dirname = os.path.dirname(__file__)
+                parent_dir = os.path.dirname(dirname) 
+                cache_dir = os.path.join(parent_dir, "frontend", "cache", "avatars")
+                os.makedirs(cache_dir, exist_ok=True)
+                
+                file_path = os.path.join(cache_dir, f"profile_{user_id}.jpg")
+                path = await client.download_profile_photo(user, file=file_path)
+                if path and os.path.exists(file_path):
+                    avatar_path = f"cache/avatars/profile_{user_id}.jpg"
+            except Exception as ae:
+                logger.warning(f"Failed to download profile photo for {user_id}: {ae}")
+
+            # Return profile information
+            profile_info = {
+                "id": str(user.id),
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "username": user.username,
+                "phone": getattr(user, 'phone', None),
+                "about": full_user.full_user.about if hasattr(full_user, 'full_user') else None,
+                "avatar_path": avatar_path
+            }
+            return {"success": True, "profile": profile_info}
+            
+        except Exception as e:
+            logger.error(f"Failed to get user profile for {user_id}: {e}")
+            return {"success": False, "error": str(e)}
+        finally:
+            db.close()
+
     async def get_group_participants(self, account_id: int, chat_id: int, limit: int = 100):
         db = SessionLocal()
         try:

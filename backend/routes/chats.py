@@ -99,3 +99,20 @@ async def get_members(
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error"))
     return result
+
+@router.get("/user/{user_id}")
+async def get_user_profile(
+    user_id: int,
+    account_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # Verify account ownership
+    account = db.query(Account).filter(Account.id == account_id, Account.user_id == current_user.id).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    result = await client_manager.get_user_profile(account_id, user_id)
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error"))
+    return result
