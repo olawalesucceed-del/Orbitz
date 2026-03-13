@@ -377,10 +377,11 @@ async function showUserProfile(userId) {
             
             content.innerHTML = html;
         } else {
-            content.innerHTML = '<div style="padding:40px 20px; color:var(--danger); font-size:13px; text-align:center">' + (res?.error || 'Failed to load profile.') + '</div>';
+            const errMsg = res?.detail || res?.error || 'Failed to load profile. Please try again.';
+            content.innerHTML = '<div style="padding:40px 20px; color:var(--danger); font-size:13px; text-align:center">' + errMsg + '</div>';
         }
     } catch (e) {
-        content.innerHTML = '<div style="padding:40px 20px; color:var(--danger); font-size:13px; text-align:center">Error loading profile.</div>';
+        content.innerHTML = '<div style="padding:40px 20px; color:var(--danger); font-size:13px; text-align:center">Network error loading profile.</div>';
     }
 }
 

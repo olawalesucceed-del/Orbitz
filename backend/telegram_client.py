@@ -865,18 +865,19 @@ class TelegramClientManager:
 
     async def get_user_profile(self, account_id: int, user_id: int):
         from telethon.tl.functions.users import GetFullUserRequest
+        from telethon.tl.functions.channels import GetFullChannelRequest
+        from telethon.tl.types import User, Channel, Chat
         db = SessionLocal()
         try:
             client = await self.get_client(db, account_id)
             if not client: return {"success": False, "error": "Not logged in"}
             
-            # Fetch full user details
-            entity = await client.get_input_entity(user_id)
-            full_user = await client(GetFullUserRequest(entity))
-            user = full_user.user
+            # Fetch the entity first to know its type
+            entity = await client.get_entity(user_id)
             
-            # Download avatar
             avatar_path = None
+            profile_info = {}
+            
             try:
                 dirname = os.path.dirname(__file__)
                 parent_dir = os.path.dirname(dirname) 
@@ -884,24 +885,48 @@ class TelegramClientManager:
                 os.makedirs(cache_dir, exist_ok=True)
                 
                 file_path = os.path.join(cache_dir, f"profile_{user_id}.jpg")
-                path = await client.download_profile_photo(user, file=file_path)
+                path = await client.download_profile_photo(entity, file=file_path)
                 if path and os.path.exists(file_path):
                     avatar_path = f"cache/avatars/profile_{user_id}.jpg"
             except Exception as ae:
                 logger.warning(f"Failed to download profile photo for {user_id}: {ae}")
 
-            # Return profile information
-            profile_info = {
-                "id": str(user.id),
-                "first_name": user.first_name,
-                "last_name": user.last_name,
-                "username": user.username,
-                "phone": getattr(user, 'phone', None),
-                "about": full_user.full_user.about if hasattr(full_user, 'full_user') else None,
-                "avatar_path": avatar_path
-            }
+            if isinstance(entity, User):
+                full_user = await client(GetFullUserRequest(entity))
+                profile_info = {
+                    "id": str(entity.id),
+                    "first_name": entity.first_name,
+                    "last_name": entity.last_name,
+                    "username": entity.username,
+                    "phone": getattr(entity, 'phone', None),
+                    "about": full_user.full_user.about if hasattr(full_user, 'full_user') else None,
+                    "avatar_path": avatar_path
+                }
+            elif isinstance(entity, (Channel, Chat)):
+                # Note: Channel senders usually don't have first/last name, just title
+                about = None
+                if isinstance(entity, Channel):
+                    try:
+                        full_channel = await client(GetFullChannelRequest(entity))
+                        about = full_channel.full_chat.about
+                    except: pass
+                    
+                profile_info = {
+                    "id": str(entity.id),
+                    "first_name": getattr(entity, 'title', 'Unknown Group/Channel'),
+                    "last_name": "",
+                    "username": getattr(entity, 'username', None),
+                    "phone": None,
+                    "about": about,
+                    "avatar_path": avatar_path
+                }
+            else:
+                return {"success": False, "error": "Unsupported entity type"}
+
             return {"success": True, "profile": profile_info}
             
+        except ValueError as e:
+            return {"success": False, "error": "Entity not found. Please try viewing their profile in the official Telegram app first."}
         except Exception as e:
             logger.error(f"Failed to get user profile for {user_id}: {e}")
             return {"success": False, "error": str(e)}
