@@ -281,6 +281,12 @@ document.getElementById('auth-code-form')?.addEventListener('submit', async (e) 
   }
 });
 
+document.getElementById('auth-back-btn')?.addEventListener('click', () => {
+    document.getElementById('auth-code-form').style.display = 'none';
+    document.getElementById('auth-phone-form').style.display = 'block';
+    document.getElementById('auth-password-group').style.display = 'none';
+});
+
 // ─── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.nav-item').forEach(el => {
