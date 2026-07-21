@@ -1,5 +1,5 @@
 /**
- * Orbit AI — Main App Router & Shared Utilities
+ * Scoutrix — Main App Router & Shared Utilities
  */
 
 const API = 'https://orbitz.onrender.com'; 
@@ -304,7 +304,7 @@ async function pollQrStatus() {
             localStorage.setItem('token', res.access_token);
             currentToken = res.access_token;
             document.getElementById('auth-overlay').style.display = 'none';
-            showToast('QR Login successful! Welcome to Orbit AI.', 'success');
+            showToast('QR Login successful! Welcome to Scoutrix.', 'success');
             navigate('dashboard');
         } else if (res && (res.status === 'timeout' || res.status === 'failed')) {
             clearInterval(qrPollInterval);
@@ -388,7 +388,7 @@ document.getElementById('auth-code-form')?.addEventListener('submit', async (e) 
       localStorage.setItem('token', res.access_token);
       currentToken = res.access_token;
       document.getElementById('auth-overlay').style.display = 'none';
-      showToast('Login successful! Welcome to Orbit AI.', 'success');
+      showToast('Login successful! Welcome to Scoutrix.', 'success');
       navigate('dashboard');
     } else {
       const errorMsg = (res?.detail || res?.error || '').toLowerCase();

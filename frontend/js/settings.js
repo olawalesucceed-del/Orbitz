@@ -5,7 +5,7 @@
 function renderSettings(container) {
   container.innerHTML = `
     <div class="page-header">
-      <h1 class="page-title">⚙️ Orbit Control</h1>
+      <h1 class="page-title">⚙️ Scoutrix Control</h1>
       <p class="page-subtitle">Global configuration, security limits, and AI outreach templates</p>
     </div>
 
@@ -231,7 +231,7 @@ async function refreshAccountsList() {
     container.innerHTML = `
       <div class="card" style="grid-column: 1 / -1; text-align:center; padding: 60px; background: rgba(255,255,255,0.01)">
         <span style="font-size:48px; display:block; margin-bottom:16px">📡</span>
-        <p style="color:var(--text-secondary); margin-bottom: 24px">No orbital entities detected in your system.</p>
+        <p style="color:var(--text-secondary); margin-bottom: 24px">No connected entities detected in your system.</p>
         <button class="btn btn-primary" onclick="document.getElementById('btn-add-account').click()">Initialize Connection</button>
       </div>
     `;

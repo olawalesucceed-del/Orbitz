@@ -7,7 +7,7 @@ function renderDashboard(container) {
     <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-end">
       <div>
         <h1 class="page-title">📡 Dashboard</h1>
-        <p class="page-subtitle">Orbit AI — Global lead intelligence overview</p>
+        <p class="page-subtitle">Scoutrix — Global lead intelligence overview</p>
       </div>
       <div id="active-account-picker" style="margin-bottom:10px">
         <!-- Account selector will be injected here -->
@@ -138,12 +138,7 @@ function renderDashboard(container) {
   });
 }
 
-function getActiveAccountId() {
-    // Check localStorage first
-    const last = localStorage.getItem('last_active_account');
-    if (last) return parseInt(last);
-    return null;
-}
+// getActiveAccountId is now global in app.js
 
 async function refreshAccountPicker() {
     const container = document.getElementById('active-account-picker');

@@ -51,7 +51,7 @@ function renderCommands(container) {
 
       <div class="terminal" id="terminal">
         <div class="terminal-line">
-          <span class="terminal-prefix">Orbit AI</span>
+          <span class="terminal-prefix">Scoutrix</span>
           <span class="terminal-text terminal-info">Ready. Type a command below or click a quick command above.</span>
         </div>
         <div class="terminal-line">

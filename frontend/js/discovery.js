@@ -8,7 +8,7 @@ function renderDiscovery(container) {
     <div class="page-header">
       <div>
         <h1 class="page-title">🔍 Group Finder</h1>
-        <p class="page-subtitle">Search Telegram globally for any niche or community. Orbit AI joins groups and automatically scans them for buyers.</p>
+        <p class="page-subtitle">Search Telegram globally for any niche or community. Scoutrix joins groups and automatically scans them for buyers.</p>
       </div>
     </div>
 
@@ -67,7 +67,7 @@ function renderDiscovery(container) {
         <div style="background:rgba(139,92,246,0.06); border:1px solid rgba(139,92,246,0.2); padding:14px 16px; border-radius:10px; font-size:13px; color:var(--text-secondary); margin-bottom:20px; line-height:1.6;">
           <span style="font-size:16px; margin-right:8px;">💡</span>
           <strong style="color:var(--text-primary);">Multi-niche search:</strong> Enter multiple niches separated by commas.
-          Orbit AI will cycle through each and join the best matching groups.
+          Scoutrix will cycle through each and join the best matching groups.
         </div>
 
         <button class="btn btn-primary btn-lg" id="btn-start-discovery" style="width:100%;">

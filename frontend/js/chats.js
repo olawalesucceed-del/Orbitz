@@ -39,7 +39,7 @@ function renderChats(container) {
                 <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; opacity:0.5">
                     <span style="font-size:64px; margin-bottom:20px">📡</span>
                     <h3>Select a chat to view messages</h3>
-                    <p>Access the orbital layer of your Telegram account.</p>
+                    <p>Access the intelligence layer of your Telegram account.</p>
                 </div>
             </div>
         </div>
