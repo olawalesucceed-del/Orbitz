@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Orbit AI — Intelligent Telegram Lead Platform</title>
+  <title>Orbit AI — Premium Lead Intelligence</title>
   <meta name="description" content="Orbit AI — Intelligent Telegram scouting platform. Scan groups, discover leads, and automate outreach intelligently for any niche." />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
@@ -12,19 +12,19 @@
     <!-- Mobile hamburger -->
     <button class="hamburger" id="hamburger" aria-label="Toggle menu">☰</button>
 
-    <!-- Sidebar -->
+    <!-- Floating Island Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
         <div class="brand-icon">📡</div>
         <div class="brand-text">
           <span class="brand-name">Orbit AI</span>
-          <span class="brand-sub">Lead Intelligence</span>
+          <span class="brand-sub">Intelligence Layer</span>
         </div>
       </div>
 
       <nav class="sidebar-nav">
         <a href="#dashboard" class="nav-item active" data-page="dashboard" id="nav-dashboard">
-          <span class="nav-icon">🏠</span>
+          <span class="nav-icon">◱</span>
           <span class="nav-label">Dashboard</span>
         </a>
         <a href="#chats" class="nav-item" data-page="chats" id="nav-chats">
@@ -33,7 +33,7 @@
           <span class="nav-badge" id="chats-badge" style="display:none"></span>
         </a>
         <a href="#discovery" class="nav-item" data-page="discovery" id="nav-discovery">
-          <span class="nav-icon">🔍</span>
+          <span class="nav-icon">⚡</span>
           <span class="nav-label">Group Finder</span>
         </a>
         <a href="#webscout" class="nav-item" data-page="webscout" id="nav-webscout">
@@ -46,7 +46,7 @@
           <span class="nav-label">Broadcast</span>
         </a>
         <a href="#settings" class="nav-item" data-page="settings" id="nav-settings">
-          <span class="nav-icon">⚙️</span>
+          <span class="nav-icon">⎈</span>
           <span class="nav-label">Settings</span>
         </a>
       </nav>
@@ -54,36 +54,53 @@
       <div class="sidebar-footer">
         <div class="connection-status" id="connection-status">
           <span class="status-dot" id="status-dot"></span>
-          <span id="status-text">Checking...</span>
+          <span id="status-text">Connecting...</span>
         </div>
         <div class="ws-indicator" id="ws-indicator" style="opacity: 0.3">
-          <span class="ws-dot"></span> Live
+          <span class="ws-dot"></span> Core Online
         </div>
         <button class="logout-btn" id="logout-btn" style="display:none">
-           Logout
+           Secure Logout
         </button>
       </div>
     </aside>
 
-    <!-- Main content -->
-    <main class="main-content" id="main-content">
-      <!-- Pages injected by JS -->
-      <div id="page-container"></div>
-    </main>
+    <!-- Main Content Wrapper with Top Bar -->
+    <div class="main-wrapper">
+      
+      <!-- Top Navigation Bar -->
+      <header class="top-bar" id="top-bar">
+        <div style="color:var(--text-secondary); font-size:13px; font-weight:600; font-family:'Outfit',sans-serif; letter-spacing:0.1em; text-transform:uppercase;">
+          Workspace / <span id="top-bar-title" style="color:var(--text-white);">Dashboard</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:16px;">
+          <div style="width:32px; height:32px; border-radius:50%; background:var(--bg-glass); border:1px solid var(--border-glass); display:flex; align-items:center; justify-content:center; color:var(--text-secondary); cursor:pointer;">🔔</div>
+          <div style="width:32px; height:32px; border-radius:50%; background:var(--gradient-brand); display:flex; align-items:center; justify-content:center; color:white; font-size:12px; font-weight:800; cursor:pointer;">ME</div>
+        </div>
+      </header>
 
-    <!-- ═══════════ AUTH OVERLAY ═══════════ -->
+      <!-- Page Content Area -->
+      <main class="main-content" id="main-content">
+        <!-- Pages injected by JS -->
+        <div id="page-container"></div>
+      </main>
+
+    </div>
+
+    <!-- ═══════════ PREMIUM AUTH OVERLAY ═══════════ -->
     <div id="auth-overlay" class="auth-overlay" style="display:none">
+      <div class="auth-bg-gradient"></div>
       <canvas id="auth-particles"></canvas>
       <div class="auth-card">
         <div class="auth-icon-wrapper">🚀</div>
         <h2 id="auth-title">Orbit AI</h2>
-        <p id="auth-sub">Global Lead Intelligence. Access the orbital layer of Telegram data.</p>
+        <p id="auth-sub" class="auth-sub">Access the orbital intelligence layer. Global Telegram lead scouting.</p>
 
         <!-- Step 1: Phone Number -->
         <form id="auth-phone-form">
           <div class="form-group">
-            <label>📱 Your Telegram Number</label>
-            <div style="display:flex; gap:10px">
+            <label>📱 Secure Telegram Access</label>
+            <div style="display:flex; gap:12px">
               <div class="country-selector" id="country-selector">
                 <button type="button" class="country-btn" id="country-btn">
                   <span id="selected-flag">🇺🇸</span>
@@ -98,23 +115,23 @@
               <input type="tel" id="auth-phone" required placeholder="234 567 8900" autocomplete="tel" style="flex:1; height: 50px">
             </div>
           </div>
-          <button type="submit" id="auth-phone-submit" class="btn btn-primary" style="width:100%">Send Login Code →</button>
-          <div class="auth-footer-text">We'll send a secure code to your Telegram app.</div>
+          <button type="submit" id="auth-phone-submit" class="btn btn-primary" style="width:100%; height:50px;">Initialize Link →</button>
+          <div class="auth-footer-text">Encrypted token request sent via official Telegram API.</div>
         </form>
 
         <!-- Step 2: OTP Verification Code -->
         <form id="auth-code-form" style="display:none;">
           <div class="form-group">
-            <label for="auth-code">🔑 Verification Code</label>
-            <input type="text" id="auth-code" required placeholder="• • • • •" autocomplete="one-time-code" inputmode="numeric" maxlength="6">
+            <label for="auth-code">🔑 Authorization Code</label>
+            <input type="text" id="auth-code" required placeholder="• • • • •" autocomplete="one-time-code" inputmode="numeric" maxlength="6" style="height:50px; text-align:center; font-size:24px; letter-spacing:10px;">
           </div>
           <div class="form-group" id="auth-password-group" style="display:none;">
             <label for="auth-password">🔒 2FA Password</label>
-            <input type="password" id="auth-password" placeholder="Enter your 2FA password">
+            <input type="password" id="auth-password" placeholder="Enter your 2FA password" style="height:50px;">
           </div>
-          <button type="submit" id="auth-code-submit" class="btn btn-primary" style="width:100%">Verify & Login →</button>
-          <button type="button" id="auth-back-btn" class="btn btn-ghost mt-24" style="width:100%">← Go Back</button>
-          <div class="auth-footer-text">Check your Telegram app for the code.</div>
+          <button type="submit" id="auth-code-submit" class="btn btn-primary" style="width:100%; height:50px;">Verify Identity →</button>
+          <button type="button" id="auth-back-btn" class="btn btn-ghost mt-24" style="width:100%; height:40px;">← Cancel Link</button>
+          <div class="auth-footer-text">Enter the secure code sent to your Telegram app.</div>
         </form>
       </div>
     </div>

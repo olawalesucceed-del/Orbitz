@@ -35,6 +35,11 @@ function navigate(page) {
   document.querySelectorAll('.nav-item').forEach(el =>
     el.classList.toggle('active', el.dataset.page === page)
   );
+  
+  const topTitle = document.getElementById('top-bar-title');
+  if (topTitle) {
+      topTitle.textContent = page.charAt(0).toUpperCase() + page.slice(1);
+  }
 
   const container = document.getElementById('page-container');
   if (!container) return;
