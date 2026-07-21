@@ -67,6 +67,8 @@ class Lead(Base):
     status = Column(String, default="New")  # New, Contacted, Replied, Interested, Client
     notes = Column(Text, nullable=True)
     keywords_matched = Column(Text, nullable=True)  # JSON list of matched keywords
+    source_type = Column(String, default="telegram")  # "telegram" or "web"
+    source_url = Column(Text, nullable=True)          # URL of the web post/page where lead was found
     created_at = Column(DateTime, default=datetime.utcnow)
     contacted_at = Column(DateTime, nullable=True)
     replied_at = Column(DateTime, nullable=True)

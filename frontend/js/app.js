@@ -23,6 +23,7 @@ const pages = {
   dashboard: () => window.renderDashboard,
   chats: () => window.renderChats,
   discovery: () => window.renderDiscovery,
+  webscout: () => window.renderWebScout,
   broadcast: () => window.renderBroadcast,
   settings: () => window.renderSettings,
 };
@@ -115,6 +116,16 @@ function handleWSMessage(msg) {
     case 'scan_complete':
       showToast(`✅ Sector scan finished: ${msg.new_leads} identities found.`, 'success');
       addActivityItem({ icon: '✅', text: `Scan complete: ${msg.new_leads} new leads`, class: 'success' });
+      refreshCurrentPage();
+      break;
+    case 'web_scout_started':
+      showToast(`🌐 Web Scout scanning ${msg.subreddits?.length || 0} sources...`, 'info');
+      addActivityItem({ icon: '🌐', text: `Web Scout started across ${msg.subreddits?.length || 0} subreddits`, class: '' });
+      break;
+    case 'web_scout_complete':
+      showToast(`🌐 Web Scout done! ${msg.new_leads} buyers imported.`, 'success');
+      addActivityItem({ icon: '🌐', text: `Web Scout: ${msg.signals} signals, ${msg.new_leads} leads`, class: 'success' });
+      if (window._webScoutRefresh) window._webScoutRefresh();
       refreshCurrentPage();
       break;
     case 'flood_wait':
@@ -300,6 +311,24 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('hamburger').addEventListener('click', () => {
     document.getElementById('sidebar').classList.toggle('open');
   });
+
+  // Global helper for other modules
+  window.getActiveAccountId = () => {
+    const list = document.getElementById('settings-account-list');
+    if (list && list.value) return list.value;
+    
+    const discSelect = document.getElementById('disc-acc-select');
+    if (discSelect && discSelect.value) return discSelect.value;
+
+    const broadSelect = document.getElementById('broadcast-acc-select');
+    if (broadSelect && broadSelect.value) return broadSelect.value;
+    
+    // Fallback to localStorage
+    const last = localStorage.getItem('last_active_account');
+    if (last) return parseInt(last);
+    
+    return null;
+  };
 
   document.getElementById('logout-btn')?.addEventListener('click', logout);
 

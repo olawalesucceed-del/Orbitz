@@ -12,7 +12,7 @@ import os
 
 from database import create_tables, SessionLocal, init_default_settings
 from scheduler import start_scheduler, stop_scheduler
-from routes import auth, leads, dashboard, commands, settings, chats
+from routes import auth, leads, dashboard, commands, settings, chats, web_scout
 import telegram_client as tc
 import logging
 
@@ -68,6 +68,7 @@ app.include_router(dashboard.router)
 app.include_router(commands.router)
 app.include_router(settings.router)
 app.include_router(chats.router)
+app.include_router(web_scout.router)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
