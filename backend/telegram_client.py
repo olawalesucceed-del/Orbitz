@@ -28,24 +28,38 @@ class TelegramClientManager:
         self.broadcast_callback = None
         self.monitoring_tasks: Dict[int, asyncio.Task] = {}
 
-    def log_action(self, db, account_id: int, action_type: str, detail: str, success: bool = True):
-        # Resilience: Add retry for database locks in logging
-        max_retries = 3
+    async def db_commit_retry(self, db, max_retries: int = 5, delay: float = 0.5):
+        """Helper to commit to DB with retries for SQLite locking."""
         for attempt in range(max_retries):
             try:
-                log = ActionLog(account_id=account_id, action_type=action_type, detail=detail, success=success)
-                db.add(log)
                 db.commit()
-                return
+                return True
             except Exception as e:
                 if "locked" in str(e).lower() and attempt < max_retries - 1:
                     db.rollback()
-                    import time
-                    time.sleep(0.5)
-                else:
-                    logger.error(f"Failed to log action {action_type}: {e}")
-                    db.rollback()
-                    break
+                    await asyncio.sleep(delay)
+                    continue
+                db.rollback()
+                logger.error(f"DB Commit failed after {attempt+1} attempts: {e}")
+                return False
+
+    def log_action(self, db, account_id: int, action_type: str, detail: str, success: bool = True):
+        log = ActionLog(account_id=account_id, action_type=action_type, detail=detail, success=success)
+        db.add(log)
+        
+        # We need a synchronous version or use asyncio.create_task for the commit
+        # But for log_action, we often want it immediately. 
+        # Since it's often called from async methods, we can't easily wait here if not async.
+        # Let's make it more robust.
+        try:
+            db.commit()
+        except Exception as e:
+            if "locked" in str(e).lower():
+                logger.warning(f"DB locked during log_action for {action_type}, skipping log.")
+                db.rollback()
+            else:
+                logger.error(f"Failed to log action: {e}")
+                db.rollback()
 
     async def broadcast(self, message: dict):
         if self.broadcast_callback:
@@ -141,7 +155,7 @@ class TelegramClientManager:
             me = await client.get_me()
             account = db.query(Account).filter(Account.id == account_id).first()
             account.phone = me.phone or phone
-            db.commit()
+            await self.db_commit_retry(db)
             self.log_action(db, account_id, "auth", f"Logged in as @{me.username or me.first_name}")
             return {"success": True, "username": me.username, "first_name": me.first_name}
         except Exception as e:
@@ -149,6 +163,68 @@ class TelegramClientManager:
             return {"success": False, "error": str(e)}
 
     # --- Direct Login Methods (No DB Account ID needed yet) ---
+    
+    # Global dictionary to hold QR login statuses
+    qr_status: Dict[str, dict] = {}
+
+    async def request_qr_login(self) -> dict:
+        """Starts a QR login flow and returns the tracking token and URL."""
+        import uuid
+        token_id = str(uuid.uuid4())
+        
+        api_id = int(os.getenv("TELEGRAM_API_ID", 0))
+        api_hash = os.getenv("TELEGRAM_API_HASH")
+        if not api_id or not api_hash:
+            return {"success": False, "error": "Missing global API ID or Hash"}
+            
+        session_name = f"qr_login_{token_id[:8]}"
+        dirname = os.path.dirname(__file__)
+        session_path = os.path.join(dirname, f"{session_name}.session")
+        client = TelegramClient(session_path, api_id, api_hash)
+        
+        try:
+            await client.connect()
+            qr = await client.qr_login()
+            
+            # Store initial status
+            self.qr_status[token_id] = {"status": "pending", "session_name": session_name}
+            
+            # Spin off background task to wait for scan
+            asyncio.create_task(self._wait_for_qr(client, qr, token_id, session_name))
+            
+            return {"success": True, "token_id": token_id, "url": qr.url}
+        except Exception as e:
+            logger.error(f"Failed to start QR login: {e}")
+            return {"success": False, "error": str(e)}
+
+    async def _wait_for_qr(self, client, qr, token_id: str, session_name: str):
+        """Background task that waits for the user to scan the QR code."""
+        try:
+            await qr.wait()
+            # If wait() completes without raising, the login is successful!
+            me = await client.get_me()
+            phone = me.phone or f"qr_{me.id}"
+            clean_phone = "".join(filter(str.isdigit, str(phone)))
+            
+            # Keep client alive in the transient cache for adopt_client()
+            self.clients[f"phone_{clean_phone}"] = client
+            
+            self.qr_status[token_id] = {
+                "status": "success",
+                "phone": phone,
+                "clean_phone": clean_phone,
+                "username": me.username,
+                "first_name": me.first_name,
+                "session_name": session_name
+            }
+        except asyncio.TimeoutError:
+            self.qr_status[token_id] = {"status": "timeout"}
+            await client.disconnect()
+        except Exception as e:
+            logger.error(f"QR login wait failed: {e}")
+            self.qr_status[token_id] = {"status": "failed", "error": str(e)}
+            await client.disconnect()
+            
     async def get_transient_client(self, phone: str) -> Optional[TelegramClient]:
         clean_phone = "".join(filter(str.isdigit, phone))
         phone_key = f"phone_{clean_phone}"
@@ -341,15 +417,7 @@ class TelegramClientManager:
                                     keywords_matched=json.dumps(keywords)
                                 )
                                 db.add(lead)
-                                for _ in range(5):
-                                    try:
-                                        db.commit()
-                                        break
-                                    except Exception as e:
-                                        if "locked" in str(e).lower():
-                                            await asyncio.sleep(0.5)
-                                            continue
-                                        raise e
+                                await self.db_commit_retry(db)
                                 new_leads += 1
                                 matches_in_group += 1
                                 await self.broadcast({"type": "new_lead", "account_id": account_id, "username": username, "score": score, "group": group_name})
@@ -500,7 +568,7 @@ class TelegramClientManager:
                     created_at=datetime.utcnow()
                 )
                 db.add(lead)
-                db.commit() # Commit to get lead ID for messages
+                await self.db_commit_retry(db) # Commit to get lead ID for messages
                 lead_id = lead.id
                 synced_count += 1
             except Exception as e:
@@ -610,18 +678,7 @@ class TelegramClientManager:
             if not client or not await client.is_user_authorized():
                 return {"success": False, "error": "Not logged into Telegram"}
 
-            niche = keyword if keyword and keyword.strip() else get_setting(db, account_id, "target_niche", "IPTV")
-            self.log_action(db, account_id, "discovery", f"Starting premium search for '{niche}' (Limit: {limit}, Min Members: {min_members})")
-            await self.broadcast({"type": "discovery_started", "account_id": account_id, "niche": niche})
-
-            if not await self.is_human_active_hour(db, account_id):
-                self.log_action(db, account_id, "safety", "Discovery skipped: Outside of active working hours")
-                return {"success": False, "error": "Outside of active working hours."}
-
-            # Search for public groups/channels
-            # We search for more than the limit to allow for filtering
-            search_limit = max(40, limit * 2)
-            result = await client(SearchRequest(q=niche, limit=search_limit))
+            keywords = [k.strip() for k in keyword.split(",") if k.strip()] if keyword else [get_setting(db, account_id, "target_niche", "IPTV")]
             
             joined_count = 0
             joined_list = []
@@ -630,63 +687,83 @@ class TelegramClientManager:
             dialogs = await client.get_dialogs()
             existing_ids = {d.id for d in dialogs}
 
-            for chat in result.chats:
-                if chat.id in existing_ids:
-                    continue
-                
+            for niche in keywords:
                 if joined_count >= limit:
                     break
-
-                # Filtering Logic
-                is_megagroup = getattr(chat, 'megagroup', False)
-                is_channel = isinstance(chat, Channel) and not is_megagroup
                 
-                # Member Count Filter
-                members = getattr(chat, 'participants_count', 0)
-                if members < min_members:
-                    continue
+                self.log_action(db, account_id, "discovery", f"Starting premium search for niche '{niche}' (Remaining Limit: {limit - joined_count})")
+                await self.broadcast({"type": "discovery_started", "account_id": account_id, "niche": niche})
 
-                # Channel Filter
-                if is_channel and not include_channels:
-                    continue
-
+                # Search for public groups/channels
+                # We search for more than the limit to allow for filtering
+                search_limit = max(40, (limit - joined_count) * 2)
                 try:
-                    # Join the group
-                    await client(JoinChannelRequest(chat))
-                    joined_count += 1
-                    
-                    group_info = {
-                        "id": chat.id,
-                        "title": chat.title,
-                        "members": members,
-                        "type": "Channel" if is_channel else "Megagroup" if is_megagroup else "Chat"
-                    }
-                    joined_list.append(group_info)
-                    
-                    self.log_action(db, account_id, "discovery", f"Joined: {chat.title} ({members} members)")
-                    await self.broadcast({
-                        "type": "group_joined", 
-                        "account_id": account_id, 
-                        "title": chat.title, 
-                        "members": members,
-                        "group_id": chat.id
-                    })
-                    
-                    # Auto-Scan Logic
-                    if auto_scan:
-                        # Schedule a scan for this specific group in a few minutes
-                        # We don't do it instantly to look more "human"
-                        asyncio.create_task(self.delayed_scan(account_id, chat.id))
-                    
-                    # Humanity: Organic pause between joins
-                    if joined_count < limit:
-                        wait_time = random.randint(30, 90) # Faster than before for "manual" mode but still safe
-                        logger.info(f"Discovery: Joined {chat.title}. Waiting {wait_time}s...")
-                        await asyncio.sleep(wait_time)
-                except Exception as e:
-                    logger.warning(f"Failed to join group {getattr(chat, 'title', chat.id)}: {e}")
+                    result = await client(SearchRequest(q=niche, limit=search_limit))
+                except Exception as se:
+                    logger.warning(f"Search failed for niche '{niche}': {se}")
+                    continue
 
-            summary = f"Discovery complete. Joined {joined_count} new groups."
+                for chat in result.chats:
+                    if chat.id in existing_ids:
+                        continue
+                    
+                    if joined_count >= limit:
+                        break
+
+                    # Filtering Logic
+                    is_megagroup = getattr(chat, 'megagroup', False)
+                    is_channel = isinstance(chat, Channel) and not is_megagroup
+                    
+                    # Member Count Filter
+                    members = getattr(chat, 'participants_count', 0)
+                    if members < min_members:
+                        continue
+
+                    # Channel Filter
+                    if is_channel and not include_channels:
+                        continue
+
+                    try:
+                        # Join the group
+                        await client(JoinChannelRequest(chat))
+                        joined_count += 1
+                        
+                        group_info = {
+                            "id": chat.id,
+                            "title": chat.title,
+                            "members": members,
+                            "type": "Channel" if is_channel else "Megagroup" if is_megagroup else "Chat"
+                        }
+                        joined_list.append(group_info)
+                        
+                        self.log_action(db, account_id, "discovery", f"Joined: {chat.title} ({members} members)")
+                        await self.broadcast({
+                            "type": "group_joined", 
+                            "account_id": account_id, 
+                            "title": chat.title, 
+                            "members": members,
+                            "group_id": chat.id
+                        })
+                        
+                        # Auto-Scan Logic
+                        if auto_scan:
+                            asyncio.create_task(self.delayed_scan(account_id, chat.id))
+                        
+                        # Humanity: Organic pause between joins
+                        if joined_count < limit:
+                            wait_time = random.randint(30, 90)
+                            logger.info(f"Discovery: Joined {chat.title}. Waiting {wait_time}s...")
+                            await asyncio.sleep(wait_time)
+                    except Exception as e:
+                        logger.warning(f"Failed to join group {getattr(chat, 'title', chat.id)}: {e}")
+
+                # Optional: Delay between niches if we have more to do
+                if joined_count < limit and len(keywords) > 1:
+                    niche_delay = random.randint(60, 120)
+                    logger.info(f"Switching niche. Waiting {niche_delay}s...")
+                    await asyncio.sleep(niche_delay)
+
+            summary = f"Discovery complete across {len(keywords)} niches. Joined {joined_count} total new groups."
             self.log_action(db, account_id, "discovery", summary)
             await self.broadcast({"type": "discovery_complete", "account_id": account_id, "joined_count": joined_count, "groups": joined_list})
             return {"success": True, "joined_count": joined_count, "groups": joined_list}
@@ -727,7 +804,7 @@ class TelegramClientManager:
                     if lead.status == "Contacted": lead.status = "Replied"
                     lead.replied_at = datetime.utcnow()
                     await self.broadcast({"type": "new_reply", "account_id": account_id, "username": username, "message": event.text})
-                db_inner.commit()
+                await self.db_commit_retry(db_inner)
             finally:
                 db_inner.close()
 

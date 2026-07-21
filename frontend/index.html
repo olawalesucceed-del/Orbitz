@@ -96,8 +96,26 @@
         <h2 id="auth-title">Orbit AI</h2>
         <p id="auth-sub" class="auth-sub">Access the orbital intelligence layer. Global Telegram lead scouting.</p>
 
-        <!-- Step 1: Phone Number -->
-        <form id="auth-phone-form">
+        <!-- Auth Tabs -->
+        <div style="display:flex; border:1px solid var(--border-glass); border-radius:var(--radius-md); margin-bottom:24px; overflow:hidden; background:var(--bg-glass);">
+          <button id="tab-qr" style="flex:1; padding:12px; background:rgba(59,130,246,0.2); color:white; border:none; font-family:'Outfit'; font-weight:700; cursor:pointer; transition:0.2s;">🔳 QR Code</button>
+          <button id="tab-phone" style="flex:1; padding:12px; background:transparent; color:var(--text-secondary); border:none; font-family:'Outfit'; font-weight:700; cursor:pointer; transition:0.2s;">📱 Phone</button>
+        </div>
+
+        <!-- Step 1A: QR Code Login -->
+        <div id="auth-qr-section" style="text-align:center;">
+          <div style="background:white; padding:20px; border-radius:16px; display:inline-block; margin-bottom:20px;">
+            <div id="qr-code-container"></div>
+          </div>
+          <div class="auth-footer-text" style="margin-top:0;">Open Telegram app on your phone.<br/>Go to <b>Settings > Devices > Link Desktop Device</b><br/>and scan this code.</div>
+          <div id="qr-loader" style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:8px;">
+             <div class="spinner" style="width:16px; height:16px; border-width:2px;"></div>
+             <span style="font-size:13px; color:var(--text-secondary)">Waiting for scan...</span>
+          </div>
+        </div>
+
+        <!-- Step 1B: Phone Number Login -->
+        <form id="auth-phone-form" style="display:none;">
           <div class="form-group">
             <label>📱 Secure Telegram Access</label>
             <div style="display:flex; gap:12px">
@@ -119,7 +137,7 @@
           <div class="auth-footer-text">Encrypted token request sent via official Telegram API.</div>
         </form>
 
-        <!-- Step 2: OTP Verification Code -->
+        <!-- Step 2: OTP Verification Code (Only for Phone Flow) -->
         <form id="auth-code-form" style="display:none;">
           <div class="form-group">
             <label for="auth-code">🔑 Authorization Code</label>
@@ -140,6 +158,7 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="js/countries.js"></script>
   <script src="js/app.js"></script>
   <script src="js/dashboard.js"></script>

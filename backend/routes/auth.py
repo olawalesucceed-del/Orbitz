@@ -124,6 +124,89 @@ async def verify_code(req: VerifyRequest, db: Session = Depends(get_db), current
         raise HTTPException(status_code=400, detail=result["error"])
     return result
 
+# --- QR Login Flow ---
+
+@router.post("/qr/start")
+async def qr_start():
+    result = await client_manager.request_qr_login()
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to start QR flow"))
+    return result
+
+@router.get("/qr/status/{token_id}")
+async def qr_status(token_id: str, db: Session = Depends(get_db)):
+    status_data = client_manager.qr_status.get(token_id)
+    if not status_data:
+        raise HTTPException(status_code=404, detail="Token not found")
+        
+    if status_data["status"] == "pending":
+        return {"status": "pending"}
+        
+    if status_data["status"] in ["timeout", "failed"]:
+        return {"status": status_data["status"], "error": status_data.get("error", "QR Login Failed")}
+        
+    if status_data["status"] == "success":
+        # Auto-provision logic, exactly like verify-login
+        from auth_utils import get_password_hash, create_access_token
+        import secrets
+        
+        clean_phone = status_data["clean_phone"]
+        username = clean_phone
+        user = db.query(User).filter(User.username == username).first()
+        
+        if not user:
+            random_pass = secrets.token_urlsafe(32)
+            user = User(
+                username=username,
+                hashed_password=get_password_hash(random_pass)
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            
+        session_name = status_data["session_name"]
+        account = db.query(Account).filter(Account.session_name == session_name).first()
+        
+        if not account:
+            account = Account(
+                session_name=session_name,
+                phone=status_data["phone"],
+                user_id=user.id
+            )
+            db.add(account)
+            db.commit()
+            db.refresh(account)
+            init_default_settings(db, account.id)
+            
+        import asyncio
+        await client_manager.adopt_client(account.id, clean_phone)
+
+        if account.id not in client_manager.monitoring_tasks or client_manager.monitoring_tasks[account.id].done():
+            client_manager.monitoring_tasks[account.id] = asyncio.create_task(
+                client_manager.start_reply_listener(account.id)
+            )
+
+        async def _initial_startup(account_id: int):
+            import logging
+            log = logging.getLogger(__name__)
+            try:
+                await client_manager.sync_dialogs(account_id)
+            except Exception as e:
+                log.warning(f"Initial sync failed for account {account_id}: {e}")
+                
+        access_token = create_access_token(data={"sub": user.username})
+        
+        # Clean up the token from memory
+        del client_manager.qr_status[token_id]
+        
+        return {
+            "status": "success",
+            "access_token": access_token, 
+            "token_type": "bearer",
+            "account_id": account.id,
+            "phone": account.phone
+        }
+
 # --- Direct Telegram Login Flow ---
 
 @router.post("/request-login")
@@ -227,5 +310,21 @@ async def logout(account_id: int, db: Session = Depends(get_db), current_user: U
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 
+    session_name = account.session_name
     await client_manager.disconnect_client(account_id)
+    
+    # Delete from DB
+    db.delete(account)
+    db.commit()
+    
+    # Delete .session file if it exists
+    try:
+        dirname = os.path.dirname(os.path.dirname(__file__)) # Go up from routes/ to backend/
+        session_path = os.path.join(dirname, f"{session_name}.session")
+        if os.path.exists(session_path):
+            os.remove(session_path)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to delete session file {session_name}: {e}")
+
     return {"success": True}

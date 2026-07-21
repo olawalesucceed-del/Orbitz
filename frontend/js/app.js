@@ -203,23 +203,120 @@ function showToast(message, type = 'info', duration = 4000) {
 }
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
+let qrPollInterval = null;
+let currentQrToken = null;
+
 function showAuth() {
   const overlay = document.getElementById('auth-overlay');
   if (overlay) {
     overlay.style.display = 'flex';
-    document.getElementById('auth-phone-form').style.display = 'block';
+    document.getElementById('auth-phone-form').style.display = 'none';
     document.getElementById('auth-code-form').style.display = 'none';
+    document.getElementById('auth-qr-section').style.display = 'block';
+    
+    // Reset Tabs
+    document.getElementById('tab-qr').style.background = 'rgba(59,130,246,0.2)';
+    document.getElementById('tab-qr').style.color = 'white';
+    document.getElementById('tab-phone').style.background = 'transparent';
+    document.getElementById('tab-phone').style.color = 'var(--text-secondary)';
+    
     initParticleAnimation();
+    startQrFlow();
   }
 }
 
 function logout() {
   localStorage.removeItem('token');
   currentToken = null;
+  if(qrPollInterval) clearInterval(qrPollInterval);
   showAuth();
 }
 
-// Step 1: Request Code
+// ─── Dual Auth Tabs ─────────────────────────────────────────────────────────
+document.getElementById('tab-qr')?.addEventListener('click', () => {
+    document.getElementById('auth-qr-section').style.display = 'block';
+    document.getElementById('auth-phone-form').style.display = 'none';
+    document.getElementById('auth-code-form').style.display = 'none';
+    
+    document.getElementById('tab-qr').style.background = 'rgba(59,130,246,0.2)';
+    document.getElementById('tab-qr').style.color = 'white';
+    document.getElementById('tab-phone').style.background = 'transparent';
+    document.getElementById('tab-phone').style.color = 'var(--text-secondary)';
+    
+    startQrFlow();
+});
+
+document.getElementById('tab-phone')?.addEventListener('click', () => {
+    document.getElementById('auth-qr-section').style.display = 'none';
+    document.getElementById('auth-phone-form').style.display = 'block';
+    document.getElementById('auth-code-form').style.display = 'none';
+    
+    document.getElementById('tab-phone').style.background = 'rgba(59,130,246,0.2)';
+    document.getElementById('tab-phone').style.color = 'white';
+    document.getElementById('tab-qr').style.background = 'transparent';
+    document.getElementById('tab-qr').style.color = 'var(--text-secondary)';
+    
+    if(qrPollInterval) clearInterval(qrPollInterval);
+});
+
+// ─── QR Auth Flow ───────────────────────────────────────────────────────────
+async function startQrFlow() {
+    if(qrPollInterval) clearInterval(qrPollInterval);
+    const container = document.getElementById('qr-code-container');
+    const loader = document.getElementById('qr-loader');
+    if(!container) return;
+    
+    container.innerHTML = '<div class="spinner" style="width:32px;height:32px;border-width:3px"></div>';
+    loader.style.display = 'none';
+    
+    try {
+        const res = await apiFetch('/auth/qr/start', { method: 'POST' });
+        if(res && res.success) {
+            container.innerHTML = '';
+            new QRCode(container, {
+                text: res.url,
+                width: 200,
+                height: 200,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            currentQrToken = res.token_id;
+            loader.style.display = 'flex';
+            
+            // Start Polling
+            qrPollInterval = setInterval(pollQrStatus, 2000);
+        } else {
+            container.innerHTML = '<div style="color:var(--danger); font-size:12px;">Failed to generate QR</div>';
+            showToast(res?.detail || res?.error || 'QR generation failed', 'error');
+        }
+    } catch(e) {
+        container.innerHTML = '<div style="color:var(--danger); font-size:12px;">Network Error</div>';
+    }
+}
+
+async function pollQrStatus() {
+    if(!currentQrToken) return;
+    try {
+        const res = await apiFetch(`/auth/qr/status/${currentQrToken}`);
+        if(res && res.status === 'success') {
+            clearInterval(qrPollInterval);
+            localStorage.setItem('token', res.access_token);
+            currentToken = res.access_token;
+            document.getElementById('auth-overlay').style.display = 'none';
+            showToast('QR Login successful! Welcome to Orbit AI.', 'success');
+            navigate('dashboard');
+        } else if (res && (res.status === 'timeout' || res.status === 'failed')) {
+            clearInterval(qrPollInterval);
+            showToast('QR Login expired or failed. Generating a new one...', 'warning');
+            startQrFlow();
+        }
+    } catch(e) {
+        // Ignore network blips during polling
+    }
+}
+
+// Step 1: Request Code (Phone Flow)
 document.getElementById('auth-phone-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const rawPhone = document.getElementById('auth-phone').value.trim().replace(/[\s\-()]/g, '');
