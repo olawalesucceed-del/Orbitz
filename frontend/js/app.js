@@ -21,58 +21,71 @@ let loginPhoneNumber = null;
 // ─── Router ────────────────────────────────────────────────────────────────
 const pages = {
   dashboard: () => window.renderDashboard,
-  chats: () => window.renderChats,
+  chats:     () => window.renderChats,
   discovery: () => window.renderDiscovery,
-  webscout: () => window.renderWebScout,
+  webscout:  () => window.renderWebScout,
   broadcast: () => window.renderBroadcast,
-  settings: () => window.renderSettings,
+  settings:  () => window.renderSettings,
 };
 
 function navigate(page) {
-  if (!currentToken) {
-    showAuth();
-    return;
-  }
+  if (!currentToken) { showAuth(); return; }
 
-  // Update nav state
-  document.querySelectorAll('.nav-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.page === page);
-  });
+  // Update nav highlight
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.page === page)
+  );
 
   const container = document.getElementById('page-container');
   if (!container) return;
-  
-  // Premium loading state
+
+  // Show loading spinner
   container.innerHTML = `
-    <div style="display:flex; align-items:center; justify-content:center; height:60vh; flex-direction:column; gap:20px; animation:fadeIn 0.5s ease">
-        <div class="spinner" style="width:48px; height:48px; border-width:4px"></div>
-        <div style="font-size:14px; font-weight:700; color:var(--accent-primary); letter-spacing:0.1em; text-transform:uppercase">Synchronizing Intel Layer...</div>
+    <div style="display:flex;align-items:center;justify-content:center;height:60vh;flex-direction:column;gap:20px;animation:fadeIn 0.5s ease">
+      <div class="spinner" style="width:48px;height:48px;border-width:4px"></div>
+      <div style="font-size:14px;font-weight:700;color:var(--accent-primary);letter-spacing:0.1em;text-transform:uppercase">
+        Loading ${page}...
+      </div>
     </div>
   `;
-  
-  const renderFn = pages[page] ? pages[page]() : null;
-  if (renderFn) {
-    setTimeout(() => {
-        container.innerHTML = ''; 
-        renderFn(container);
-    }, 150); // Subtle delay for feel
-  } else {
-    setTimeout(() => {
-        const retryFn = pages[page] ? pages[page]() : null;
-        if (retryFn) {
-          container.innerHTML = '';
-          retryFn(container);
-        } else {
-          container.innerHTML = `<div class="card" style="margin-top:40px; text-align:center; padding:60px">
-            <h2 style="color:var(--danger)">Module Load Failure</h2>
-            <p style="color:var(--text-secondary)">The requested intelligence module ${page} could not be initialized.</p>
-          </div>`;
-        }
-    }, 200);
-  }
 
   window.location.hash = page;
+
+  // Poll until the render function is available (up to 2s)
+  let attempts = 0;
+  const maxAttempts = 20;
+
+  function tryRender() {
+    const renderFn = pages[page] ? pages[page]() : null;
+
+    if (typeof renderFn === 'function') {
+      container.innerHTML = '';
+      renderFn(container);
+      return;
+    }
+
+    attempts++;
+    if (attempts < maxAttempts) {
+      setTimeout(tryRender, 100);
+    } else {
+      // Give up and show a friendly error
+      container.innerHTML = `
+        <div class="card" style="margin-top:40px;text-align:center;padding:60px;max-width:500px;margin-left:auto;margin-right:auto;">
+          <div style="font-size:48px;margin-bottom:20px;">⚠️</div>
+          <h2 style="color:var(--danger);margin-bottom:12px;">Module Load Failure</h2>
+          <p style="color:var(--text-secondary);margin-bottom:24px;">
+            The <strong>${page}</strong> module could not be initialized.<br>
+            Try a hard refresh (<kbd>Ctrl+Shift+R</kbd>) to reload all scripts.
+          </p>
+          <button class="btn btn-primary" onclick="location.reload(true)">🔄 Reload Page</button>
+        </div>`;
+    }
+  }
+
+  // Start first attempt after small delay to let browser parse remaining scripts
+  setTimeout(tryRender, 80);
 }
+
 
 // ─── WebSocket ──────────────────────────────────────────────────────────────
 function connectWS() {
