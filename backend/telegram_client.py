@@ -612,7 +612,7 @@ class TelegramClientManager:
         return {"success": True, "synced_count": synced_count}
 
     async def post_to_groups(self, account_id: int, message_text: str) -> dict:
-        """Post a text content to all joined groups."""
+        """Post text content to every joined group and supergroup across all folders."""
         db = SessionLocal()
         try:
             try:
@@ -622,46 +622,91 @@ class TelegramClientManager:
                     return {"success": False, "error": "Not logged in"}
 
                 self.log_action(db, account_id, "broadcast", f"Started group broadcast: {message_text[:30]}...")
-                
-                dialogs = await client.get_dialogs()
-                groups = [d for d in dialogs if d.is_group or d.is_channel]
-                
-                logger.info(f"Broadcast: Found {len(groups)} total groups/channels.")
-                
+
+                # 1. Fetch ALL dialogs (main folder 0, archived folder 1)
+                dialogs = await client.get_dialogs(limit=None)
+                try:
+                    archived = await client.get_dialogs(limit=None, folder=1)
+                except Exception:
+                    archived = []
+
+                all_dialogs = dialogs + archived
+
+                # Deduplicate by entity ID
+                seen_ids = set()
+                unique_dialogs = []
+                for d in all_dialogs:
+                    if d.id not in seen_ids:
+                        seen_ids.add(d.id)
+                        unique_dialogs.append(d)
+
+                # 2. Filter for groups, supergroups, and channels where posting is permitted
+                target_groups = []
+                for d in unique_dialogs:
+                    # Normal groups / megagroups
+                    if d.is_group:
+                        target_groups.append(d)
+                    elif d.is_channel:
+                        entity = d.entity
+                        is_megagroup = getattr(entity, 'megagroup', False)
+                        is_broadcast = getattr(entity, 'broadcast', False)
+                        creator = getattr(entity, 'creator', False)
+                        admin_rights = getattr(entity, 'admin_rights', None)
+                        # Include if it is an interactive supergroup or user is admin/creator of channel
+                        if is_megagroup or (not is_broadcast) or creator or admin_rights:
+                            target_groups.append(d)
+
+                logger.info(f"Broadcast: Found {len(target_groups)} total postable groups/channels for account {account_id}.")
+                self.log_action(db, account_id, "broadcast", f"Discovered {len(target_groups)} groups to post to.")
+
                 posted = 0
-                skipped_broadcast = 0
-                
-                for dialog in groups:
+                failed = 0
+
+                for dialog in target_groups:
                     try:
-                        # Skip broadcast channels where we might not have permission
-                        is_broadcast = getattr(dialog.entity, 'broadcast', False)
-                        if is_broadcast:
-                            skipped_broadcast += 1
-                            continue
-                            
                         await client.send_message(dialog.entity, message_text)
                         posted += 1
+                        logger.info(f"[Broadcast] ({posted}/{len(target_groups)}) Posted to group: {dialog.name}")
                         self.log_action(db, account_id, "broadcast", f"Posted to group: {dialog.name}")
-                        
-                        # Short jitter between group posts
-                        await asyncio.sleep(random.uniform(2.0, 5.5))
+
+                        # Short delay between group posts (2 to 3.5s)
+                        await asyncio.sleep(random.uniform(2.0, 3.5))
+
+                    except FloodWaitError as fwe:
+                        logger.warning(f"Telegram flood wait on group post: {fwe.seconds}s cooldown...")
+                        self.log_action(db, account_id, "broadcast", f"Rate limit hit, pausing for {fwe.seconds}s", success=False)
+                        if fwe.seconds <= 60:
+                            await asyncio.sleep(fwe.seconds + 2)
+                            try:
+                                await client.send_message(dialog.entity, message_text)
+                                posted += 1
+                                self.log_action(db, account_id, "broadcast", f"Posted to group (after cooldown): {dialog.name}")
+                            except Exception:
+                                failed += 1
+                        else:
+                            failed += 1
+                            await asyncio.sleep(10)
                     except Exception as e:
-                        self.log_action(db, account_id, "broadcast", f"Failed to post to {dialog.name}: {str(e)}", success=False)
+                        failed += 1
                         logger.warning(f"Failed to post to group {dialog.name}: {e}")
                         continue
-                
-                summary = f"Broadcast complete. Posted to {posted} groups."
-                if skipped_broadcast > 0:
-                    summary += f" (Skipped {skipped_broadcast} read-only channels)"
-                
+
+                summary = f"Broadcast complete. Posted to {posted} of {len(target_groups)} groups."
+                if failed > 0:
+                    summary += f" ({failed} restricted or skipped)"
+
                 self.log_action(db, account_id, "broadcast", summary)
-                return {"success": True, "posted": posted}
+                return {"success": True, "posted": posted, "total_groups": len(target_groups), "failed": failed}
+
             except Exception as outer_e:
                 self.log_action(db, account_id, "error", f"Critical failure in broadcast task: {str(outer_e)}", success=False)
                 logger.error(f"Broadcast task error: {outer_e}")
                 return {"success": False, "error": str(outer_e)}
         finally:
             db.close()
+
+    # Alias for broadcasting to groups
+    broadcast_to_groups = post_to_groups
 
     async def discover_and_join_groups(
         self, 
@@ -814,7 +859,7 @@ class TelegramClientManager:
             client = await self.get_client(db, account_id)
             if not client: return {"success": False, "error": "Not logged in"}
             
-            dialogs = await client.get_dialogs(limit=100)
+            dialogs = await client.get_dialogs(limit=1000)
             chats = []
             for d in dialogs:
                 ctype = 'private'
@@ -867,38 +912,130 @@ class TelegramClientManager:
             client = await self.get_client(db, account_id)
             if not client: return {"success": False, "error": "Not logged in"}
             
-            # Using get_messages on the chat_id
             entity = await client.get_input_entity(chat_id)
             msgs = await client.get_messages(entity, limit=limit)
             
+            # Directories for caching avatars and media
+            dirname = os.path.dirname(__file__)
+            parent_dir = os.path.dirname(dirname)
+            avatar_dir = os.path.join(dirname, "..", "frontend", "cache", "avatars")
+            media_dir = os.path.join(parent_dir, "frontend", "cache", "media")
+            os.makedirs(media_dir, exist_ok=True)
+            os.makedirs(avatar_dir, exist_ok=True)
+
+            from telethon.tl.types import (
+                MessageMediaPhoto, MessageMediaDocument,
+                DocumentAttributeVideo, DocumentAttributeAudio,
+                DocumentAttributeSticker, DocumentAttributeFilename,
+                DocumentAttributeAnimated
+            )
+            
             formatted = []
             for m in msgs:
-                if not m.text: continue
+                # Skip empty service messages
+                if not m.text and not m.media:
+                    continue
                 
+                # Resolve sender name
                 sender_name = "Unknown"
                 if m.sender:
                     if hasattr(m.sender, 'title'):
                         sender_name = m.sender.title
                     elif hasattr(m.sender, 'first_name'):
                         sender_name = f"{m.sender.first_name or ''} {m.sender.last_name or ''}".strip()
-                elif m.out:
+                if m.out:
                     sender_name = "Me"
-                    
+                
+                # Sender avatar
+                sender_id_str = str(m.sender_id) if m.sender_id else ""
+                sender_avatar = None
+                if sender_id_str:
+                    for cp in [f"avatar_{sender_id_str}.jpg", f"profile_{sender_id_str}.jpg"]:
+                        if os.path.exists(os.path.join(avatar_dir, cp)):
+                            sender_avatar = f"cache/avatars/{cp}"
+                            break
+
+                # Media handling
+                media_url = None
+                media_type = None  # 'photo', 'video', 'audio', 'sticker', 'document', 'voice'
+                
+                if m.media:
+                    try:
+                        if isinstance(m.media, MessageMediaPhoto):
+                            media_type = "photo"
+                            fname = f"msg_{m.id}_photo.jpg"
+                            fpath = os.path.join(media_dir, fname)
+                            if not os.path.exists(fpath):
+                                await client.download_media(m.media, file=fpath)
+                            if os.path.exists(fpath):
+                                media_url = f"cache/media/{fname}"
+
+                        elif isinstance(m.media, MessageMediaDocument):
+                            doc = m.media.document
+                            attrs = {type(a).__name__: a for a in doc.attributes}
+                            
+                            if 'DocumentAttributeSticker' in attrs or 'DocumentAttributeAnimated' in attrs:
+                                media_type = "sticker"
+                                ext = "webp" if 'DocumentAttributeSticker' in attrs else "webp"
+                                fname = f"msg_{m.id}_sticker.{ext}"
+                                fpath = os.path.join(media_dir, fname)
+                                if not os.path.exists(fpath):
+                                    await client.download_media(m.media, file=fpath)
+                                if os.path.exists(fpath):
+                                    media_url = f"cache/media/{fname}"
+
+                            elif 'DocumentAttributeVideo' in attrs:
+                                media_type = "video"
+                                fname = f"msg_{m.id}_video.mp4"
+                                fpath = os.path.join(media_dir, fname)
+                                if not os.path.exists(fpath):
+                                    await client.download_media(m.media, file=fpath)
+                                if os.path.exists(fpath):
+                                    media_url = f"cache/media/{fname}"
+
+                            elif 'DocumentAttributeAudio' in attrs:
+                                audio_attr = attrs['DocumentAttributeAudio']
+                                media_type = "voice" if getattr(audio_attr, 'voice', False) else "audio"
+                                fname = f"msg_{m.id}_audio.ogg"
+                                fpath = os.path.join(media_dir, fname)
+                                if not os.path.exists(fpath):
+                                    await client.download_media(m.media, file=fpath)
+                                if os.path.exists(fpath):
+                                    media_url = f"cache/media/{fname}"
+                            else:
+                                media_type = "document"
+                                # Get filename if available
+                                fn_attr = attrs.get('DocumentAttributeFilename')
+                                ext = os.path.splitext(fn_attr.file_name)[1] if fn_attr else ".bin"
+                                fname = f"msg_{m.id}_doc{ext}"
+                                fpath = os.path.join(media_dir, fname)
+                                if not os.path.exists(fpath):
+                                    await client.download_media(m.media, file=fpath)
+                                if os.path.exists(fpath):
+                                    media_url = f"cache/media/{fname}"
+                    except Exception as me:
+                        logger.warning(f"Failed to download media for msg {m.id}: {me}")
+
                 formatted.append({
                     "id": m.id,
-                    "content": m.text,
+                    "content": m.text or "",
                     "direction": "sent" if m.out else "received",
                     "sent_at": m.date.isoformat() if m.date else None,
                     "sender_id": m.sender_id,
-                    "sender_name": sender_name
+                    "sender_name": sender_name,
+                    "sender_avatar": sender_avatar,
+                    "media_url": media_url,
+                    "media_type": media_type,
                 })
             
-            return {"success": True, "messages": formatted[::-1]} # Return in chronological order
+            return {"success": True, "messages": formatted[::-1]}  # chronological order
         except Exception as e:
             logger.error(f"Failed to fetch messages for {chat_id}: {e}")
             return {"success": False, "error": str(e)}
         finally:
             db.close()
+
+
 
     async def get_me(self, account_id: int):
         db = SessionLocal()
@@ -1021,8 +1158,17 @@ class TelegramClientManager:
             # Use get_participants for groups/channels
             participants = await client.get_participants(entity, limit=limit)
             
+            avatar_dir = os.path.join(os.path.dirname(__file__), "..", "frontend", "cache", "avatars")
             formatted = []
             for p in participants:
+                p_id_str = str(p.id)
+                avatar_path = None
+                check_paths = [f"profile_{p_id_str}.jpg", f"avatar_{p_id_str}.jpg"]
+                for cp in check_paths:
+                    if os.path.exists(os.path.join(avatar_dir, cp)):
+                        avatar_path = f"cache/avatars/{cp}"
+                        break
+
                 formatted.append({
                     "id": p.id,
                     "first_name": p.first_name,
@@ -1030,7 +1176,8 @@ class TelegramClientManager:
                     "username": p.username,
                     "is_self": getattr(p, 'is_self', False),
                     "bot": getattr(p, 'bot', False),
-                    "phone": getattr(p, 'phone', None)
+                    "phone": getattr(p, 'phone', None),
+                    "avatar_path": avatar_path
                 })
             
             return {"success": True, "participants": formatted}

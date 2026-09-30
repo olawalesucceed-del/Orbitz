@@ -193,6 +193,15 @@ def start_scheduler():
         replace_existing=True
     )
 
+    # Auto-Post Content to Groups: checks every 1 minute
+    scheduler.add_job(
+        auto_post_job,
+        "interval",
+        minutes=1,
+        id="auto_post_job",
+        replace_existing=True
+    )
+
     # Process Message Queue (if needed for staggered sending)
     asyncio.create_task(process_message_queue())
 
@@ -207,3 +216,45 @@ def stop_scheduler():
     if scheduler.running:
         scheduler.shutdown(wait=False)
     scheduler_running = False
+
+
+async def auto_post_job():
+    """Auto-post content to all groups for accounts that have auto-post enabled."""
+    import time
+    from database import SessionLocal, Account, get_setting, set_setting
+    from telegram_client import client_manager
+    db = SessionLocal()
+    try:
+        accounts = db.query(Account).all()
+        now_ts = int(time.time())
+        for acc in accounts:
+            try:
+                enabled = get_setting(db, acc.id, "autopost_enabled", "false") == "true"
+                if not enabled:
+                    continue
+                message = get_setting(db, acc.id, "autopost_message", "")
+                if not message.strip():
+                    continue
+
+                interval_mins = int(get_setting(db, acc.id, "autopost_interval", "30"))
+                interval_secs = max(1, interval_mins) * 60
+
+                last_posted_ts = int(get_setting(db, acc.id, "last_autopost_timestamp", "0"))
+                if (now_ts - last_posted_ts) < interval_secs:
+                    # Interval not yet elapsed
+                    continue
+
+                logger.info(f"[AutoPost] Running scheduled group post for account {acc.session_name} ({acc.id})...")
+                # Update timestamp first to prevent concurrent double-posts
+                set_setting(db, acc.id, "last_autopost_timestamp", str(now_ts))
+                result = await client_manager.post_to_groups(acc.id, message)
+                posted = result.get("posted", 0)
+                logger.info(f"[AutoPost] Successfully posted to {posted} groups for {acc.session_name}")
+                set_setting(db, acc.id, "last_autopost_status", f"Posted to {posted} groups at {datetime.now().strftime('%H:%M')}")
+                await asyncio.sleep(5)  # small gap between accounts
+            except Exception as e:
+                logger.error(f"[AutoPost] Error for account {acc.id}: {e}")
+    finally:
+        db.close()
+
+

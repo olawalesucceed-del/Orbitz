@@ -12,7 +12,7 @@ import os
 
 from database import create_tables, SessionLocal, init_default_settings
 from scheduler import start_scheduler, stop_scheduler
-from routes import auth, leads, dashboard, commands, settings, chats, web_scout
+from routes import auth, dashboard, settings
 import telegram_client as tc
 import logging
 
@@ -37,7 +37,6 @@ async def broadcast_to_all(message: dict):
 async def lifespan(app: FastAPI):
     # Startup
     create_tables()
-    # Settings are initialized per account in auth.py
     start_scheduler()
     tc.broadcast_callback = broadcast_to_all
     yield
@@ -46,9 +45,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="AI Scout - AI Telegram Lead Platform",
-    description="AI-powered Telegram client scouting for any niche business",
-    version="1.0.0",
+    title="Scoutrix — Telegram Lead Intelligence",
+    description="AI-powered Telegram scouting platform for lead generation and outreach",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -63,12 +62,8 @@ app.add_middleware(
 
 # Register routes
 app.include_router(auth.router)
-app.include_router(leads.router)
 app.include_router(dashboard.router)
-app.include_router(commands.router)
 app.include_router(settings.router)
-app.include_router(chats.router)
-app.include_router(web_scout.router)
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

@@ -165,7 +165,9 @@ async def qr_status(token_id: str, db: Session = Depends(get_db)):
             db.refresh(user)
             
         session_name = status_data["session_name"]
-        account = db.query(Account).filter(Account.session_name == session_name).first()
+        account = db.query(Account).filter(
+            (Account.phone == status_data["phone"]) | (Account.session_name == session_name)
+        ).first()
         
         if not account:
             account = Account(
@@ -177,6 +179,12 @@ async def qr_status(token_id: str, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(account)
             init_default_settings(db, account.id)
+        else:
+            account.session_name = session_name
+            account.user_id = user.id
+            account.phone = status_data["phone"]
+            db.commit()
+            db.refresh(account)
             
         import asyncio
         await client_manager.adopt_client(account.id, clean_phone)
@@ -193,6 +201,8 @@ async def qr_status(token_id: str, db: Session = Depends(get_db)):
                 await client_manager.sync_dialogs(account_id)
             except Exception as e:
                 log.warning(f"Initial sync failed for account {account_id}: {e}")
+
+        asyncio.create_task(_initial_startup(account.id))
                 
         access_token = create_access_token(data={"sub": user.username})
         
@@ -223,21 +233,16 @@ async def verify_login(req: DirectVerifyRequest, db: Session = Depends(get_db)):
     )
     if not result.get("success"):
         raise HTTPException(status_code=400, detail=result.get("error", "Verification failed"))
-        
-    # Verification successful. Auto-provision User and Account.
+
     from auth_utils import get_password_hash, create_access_token
     import secrets
-    
-    # Clean phone to use as base identifier
+
     clean_phone = "".join(filter(str.isdigit, req.phone))
-    
-    # 1. Check or create User
-    # We use the phone number as the username for these auto-provisioned accounts
+
     username = clean_phone
     user = db.query(User).filter(User.username == username).first()
-    
+
     if not user:
-        # Create a new user with a random un-guessable password since they only log in via OTP
         random_pass = secrets.token_urlsafe(32)
         user = User(
             username=username,
@@ -246,34 +251,38 @@ async def verify_login(req: DirectVerifyRequest, db: Session = Depends(get_db)):
         db.add(user)
         db.commit()
         db.refresh(user)
-        
-    # 2. Check or create Telegram Account linked to this User
+
     session_name = result.get("session_name")
-    account = db.query(Account).filter(Account.session_name == session_name).first()
-    
+    phone_val = result.get("phone", req.phone)
+    account = db.query(Account).filter(
+        (Account.phone == phone_val) | (Account.session_name == session_name)
+    ).first()
+
     if not account:
         account = Account(
             session_name=session_name,
-            phone=result.get("phone", req.phone),
+            phone=phone_val,
             user_id=user.id
         )
         db.add(account)
         db.commit()
         db.refresh(account)
         init_default_settings(db, account.id)
-    
-    # 3. Adopt the live Telegram client into client_manager under the real account_id.
-    #    This moves it from the temporary phone-keyed cache so all background jobs can use it.
+    else:
+        account.session_name = session_name
+        account.user_id = user.id
+        account.phone = phone_val
+        db.commit()
+        db.refresh(account)
+
     import asyncio
     await client_manager.adopt_client(account.id, clean_phone)
 
-    # 4. Start reply listener for live tracking of incoming messages
     if account.id not in client_manager.monitoring_tasks or client_manager.monitoring_tasks[account.id].done():
         client_manager.monitoring_tasks[account.id] = asyncio.create_task(
             client_manager.start_reply_listener(account.id)
         )
 
-    # 5. Kick off immediate background sync + scan so dashboard shows data right away
     async def _initial_startup(account_id: int):
         import logging
         log = logging.getLogger(__name__)
@@ -281,11 +290,13 @@ async def verify_login(req: DirectVerifyRequest, db: Session = Depends(get_db)):
             await client_manager.sync_dialogs(account_id)
         except Exception as e:
             log.warning(f"Initial sync failed for account {account_id}: {e}")
-    # 5. Generate JWT Token for the User
+
+    asyncio.create_task(_initial_startup(account.id))
+
     access_token = create_access_token(data={"sub": user.username})
-    
+
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "token_type": "bearer",
         "account_id": account.id,
         "phone": account.phone

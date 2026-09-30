@@ -15,22 +15,16 @@
     <!-- Floating Island Sidebar -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-brand">
-        <div class="brand-icon" style="background: transparent; box-shadow: none;">
-          <svg viewBox="0 0 24 24" fill="none" stroke="url(#blue-grad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:100%; height:100%;">
-            <defs>
-              <linearGradient id="blue-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-                <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
-              </linearGradient>
-            </defs>
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            <polygon points="11 7 15 11 11 15 7 11 11 7" fill="#3b82f6" stroke="none"></polygon>
+        <div class="brand-icon">
+          <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:28px; height:28px;">
+            <path d="M14 2L2 8L14 14L26 8L14 2Z" fill="white" fill-opacity="0.95"/>
+            <path d="M2 14L14 20L26 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 20L14 26L26 20" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
         <div class="brand-text">
           <span class="brand-name">SCOUTRIX</span>
-          <span class="brand-sub">Intelligence Layer</span>
+          <span class="brand-sub">Telegram Automation</span>
         </div>
       </div>
 
@@ -39,20 +33,7 @@
           <span class="nav-icon">◱</span>
           <span class="nav-label">Dashboard</span>
         </a>
-        <a href="#chats" class="nav-item" data-page="chats" id="nav-chats">
-          <span class="nav-icon">💬</span>
-          <span class="nav-label">Chat Hub</span>
-          <span class="nav-badge" id="chats-badge" style="display:none"></span>
-        </a>
-        <a href="#discovery" class="nav-item" data-page="discovery" id="nav-discovery">
-          <span class="nav-icon">⚡</span>
-          <span class="nav-label">Group Finder</span>
-        </a>
-        <a href="#webscout" class="nav-item" data-page="webscout" id="nav-webscout">
-          <span class="nav-icon">🌐</span>
-          <span class="nav-label">Web Scout</span>
-          <span class="nav-badge" id="webscout-badge" style="display:none"></span>
-        </a>
+
         <a href="#broadcast" class="nav-item" data-page="broadcast" id="nav-broadcast">
           <span class="nav-icon">📢</span>
           <span class="nav-label">Broadcast</span>
@@ -71,9 +52,6 @@
         <div class="ws-indicator" id="ws-indicator" style="opacity: 0.3">
           <span class="ws-dot"></span> Core Online
         </div>
-        <button class="logout-btn" id="logout-btn" style="display:none">
-           Secure Logout
-        </button>
       </div>
     </aside>
 
@@ -82,12 +60,16 @@
       
       <!-- Top Navigation Bar -->
       <header class="top-bar" id="top-bar">
-        <div style="color:var(--text-secondary); font-size:13px; font-weight:600; font-family:'Outfit',sans-serif; letter-spacing:0.1em; text-transform:uppercase;">
-          Workspace / <span id="top-bar-title" style="color:var(--text-white);">Dashboard</span>
+        <div style="color:var(--text-muted); font-size:12px; font-weight:600; font-family:'Inter',sans-serif; letter-spacing:0.08em; text-transform:uppercase;">
+          Workspace / <span id="top-bar-title" style="color:var(--text-heading);">Dashboard</span>
         </div>
-        <div style="display:flex; align-items:center; gap:16px;">
-          <div style="width:32px; height:32px; border-radius:50%; background:var(--bg-glass); border:1px solid var(--border-glass); display:flex; align-items:center; justify-content:center; color:var(--text-secondary); cursor:pointer;">🔔</div>
-          <div style="width:32px; height:32px; border-radius:50%; background:var(--gradient-brand); display:flex; align-items:center; justify-content:center; color:white; font-size:12px; font-weight:800; cursor:pointer;">ME</div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <button type="button" onclick="window.show2027AdvisoryModal()" style="background:#f0f9ff; border:1px solid #bae6fd; color:#0284c7; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+            <span>🏛️</span> 2027 Billing Notice
+          </button>
+          <button type="button" onclick="window.logout()" style="background:#fee2e2; border:1px solid #fecaca; color:#dc2626; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:0.2s;">
+            <span>🚪</span> Sign Out
+          </button>
         </div>
       </header>
 
@@ -97,38 +79,88 @@
         <div id="page-container"></div>
       </main>
 
+    <!-- ═══════════ 2027 SUBSCRIPTION ADVISORY MODAL ═══════════ -->
+    <div id="billing-advisory-modal" style="display:none; position:fixed; inset:0; z-index:3000; background:rgba(15,23,42,0.7); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; animation:fadeIn 0.25s ease;">
+      <div style="background:#ffffff; border-radius:20px; max-width:540px; width:100%; box-shadow:0 25px 60px -15px rgba(15,23,42,0.35); border:1px solid #e2e8f0; overflow:hidden; position:relative;">
+        
+        <!-- Top Gradient Header -->
+        <div style="background:linear-gradient(135deg, #0284c7 0%, #2563eb 50%, #4f46e5 100%); padding:24px 28px 20px; color:#ffffff; position:relative;">
+          <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,0.18); border:1px solid rgba(255,255,255,0.25); padding:4px 10px; border-radius:20px; font-size:11px; font-weight:800; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px;">
+            <span>🏛️</span> Roadmap & Commercial Notice
+          </div>
+          <h2 style="margin:0; font-size:22px; font-weight:900; letter-spacing:-0.03em; color:#ffffff;">
+            Platform Access & 2027 Commercial Transition
+          </h2>
+        </div>
+
+        <!-- Content Body -->
+        <div style="padding:24px 28px;">
+          <p style="font-size:14px; color:#334155; line-height:1.6; margin:0 0 16px 0;">
+            Welcome to <strong>Scoutrix</strong>. We are pleased to provide full enterprise Telegram scouting, broadcast automation, and outreach capabilities under our complimentary <strong>Early Adopter Access Program throughout 2026</strong>.
+          </p>
+
+          <p style="font-size:14px; color:#334155; line-height:1.6; margin:0 0 18px 0;">
+            Please be advised that starting <strong>January 1, 2027</strong>, Scoutrix will transition to its official tiered subscription licensing model.
+          </p>
+
+          <!-- Key Highlights Box -->
+          <div style="background:#f8fafc; border:1.5px solid #e2e8f0; border-radius:12px; padding:14px 16px; margin-bottom:22px;">
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:10px;">
+              <span style="font-size:16px; line-height:1;">✅</span>
+              <span style="font-size:13px; color:#1e293b; line-height:1.5;"><strong>Full 2026 Access:</strong> Unlimited group scanning, broadcasts, and automated outreach remain 100% active and unrestricted this year.</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="font-size:16px; line-height:1;">💎</span>
+              <span style="font-size:13px; color:#1e293b; line-height:1.5;"><strong>Priority 2027 Terms:</strong> All registered accounts will be eligible for discounted grandfathered pricing and early renewal packages before public commercial rollout.</span>
+            </div>
+          </div>
+
+          <!-- Dismiss Action Button -->
+          <button type="button" id="btn-ack-advisory" style="width:100%; height:48px; background:#0f172a; color:#ffffff; border:none; border-radius:12px; font-weight:800; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(15,23,42,0.25); transition:0.2s;">
+            I Understand & Proceed to Dashboard →
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- ═══════════ PREMIUM AUTH OVERLAY ═══════════ -->
     <div id="auth-overlay" class="auth-overlay" style="display:none">
-      <div class="auth-bg-gradient"></div>
+      <div class="auth-bg-gradient" style="overflow:hidden;">
+        <video autoplay muted loop playsinline class="auth-portrait" style="width:100%; height:100%; object-fit:cover; object-position:center;">
+          <source src="assets/ocean_ship.mp4" type="video/mp4">
+        </video>
+        <div class="auth-image-overlay">
+          <div class="overlay-brand">SCOUTRIX</div>
+          <div class="overlay-text">Global Telegram lead discovery, automated broadcasts, and high-conversion outreach.</div>
+        </div>
+      </div>
       <canvas id="auth-particles"></canvas>
       <div class="auth-card">
-        <div class="auth-icon-wrapper">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:32px; height:32px;">
-            <circle cx="11" cy="11" r="8"></circle>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            <polygon points="11 7 15 11 11 15 7 11 11 7" fill="white" stroke="none"></polygon>
+        <div class="auth-icon-wrapper" style="width:58px; height:58px; border-radius:16px; background:linear-gradient(135deg, #0284c7, #2563eb, #4f46e5); display:flex; align-items:center; justify-content:center; margin-bottom:18px; box-shadow:0 8px 24px rgba(37,99,235,0.35); border:1.5px solid rgba(255,255,255,0.2);">
+          <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:32px; height:32px;">
+            <path d="M14 2L2 8L14 14L26 8L14 2Z" fill="white" fill-opacity="0.95"/>
+            <path d="M2 14L14 20L26 14" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M2 20L14 26L26 20" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <h2 id="auth-title">SCOUTRIX</h2>
-        <p id="auth-sub" class="auth-sub">Access the Scoutrix intelligence layer. Global Telegram lead scouting.</p>
+        <h2 id="auth-title" style="font-size:32px; font-weight:900; letter-spacing:-0.04em; color:#0f172a; margin-bottom:6px;">SCOUTRIX</h2>
+        <p id="auth-sub" class="auth-sub" style="font-size:14px; color:#64748b; margin-bottom:28px;">Enterprise Telegram automation, group broadcast & lead outreach.</p>
 
         <!-- Auth Tabs -->
-        <div style="display:flex; border:1px solid var(--border-glass); border-radius:var(--radius-md); margin-bottom:24px; overflow:hidden; background:var(--bg-glass);">
-          <button id="tab-qr" style="flex:1; padding:12px; background:rgba(59,130,246,0.2); color:white; border:none; font-family:'Outfit'; font-weight:700; cursor:pointer; transition:0.2s;">🔳 QR Code</button>
-          <button id="tab-phone" style="flex:1; padding:12px; background:transparent; color:var(--text-secondary); border:none; font-family:'Outfit'; font-weight:700; cursor:pointer; transition:0.2s;">📱 Phone</button>
+        <div class="auth-tabs" style="display:flex; border:1px solid #e2e8f0; border-radius:8px; margin-bottom:32px; overflow:hidden; background:#f8fafc; padding:4px; gap:4px;">
+          <button id="tab-qr" style="flex:1; padding:10px; background:#ffffff; color:#0f172a; border:none; border-radius:6px; font-family:'Inter'; font-weight:600; cursor:pointer; transition:0.2s; box-shadow:0 1px 3px rgba(0,0,0,0.1);">QR Code</button>
+          <button id="tab-phone" style="flex:1; padding:10px; background:transparent; color:#64748b; border:none; border-radius:6px; font-family:'Inter'; font-weight:600; cursor:pointer; transition:0.2s;">Phone Number</button>
         </div>
 
         <!-- Step 1A: QR Code Login -->
-        <div id="auth-qr-section" style="text-align:center;">
-          <div style="background:white; padding:20px; border-radius:16px; display:inline-block; margin-bottom:20px;">
+        <div id="auth-qr-section" style="text-align:left;">
+          <div style="background:white; padding:24px; border:1px solid #e2e8f0; border-radius:12px; display:inline-block; margin-bottom:20px;">
             <div id="qr-code-container"></div>
           </div>
           <div class="auth-footer-text" style="margin-top:0;">Open Telegram app on your phone.<br/>Go to <b>Settings > Devices > Link Desktop Device</b><br/>and scan this code.</div>
-          <div id="qr-loader" style="margin-top:20px; display:flex; justify-content:center; align-items:center; gap:8px;">
-             <div class="spinner" style="width:16px; height:16px; border-width:2px;"></div>
-             <span style="font-size:13px; color:var(--text-secondary)">Waiting for scan...</span>
+          <div id="qr-loader" style="margin-top:20px; display:flex; justify-content:flex-start; align-items:center; gap:8px;">
+             <div class="spinner" style="width:16px; height:16px; border-width:2px; border-top-color:#3b82f6;"></div>
+             <span style="font-size:13px; color:#64748b; font-weight:500;">Waiting for scan...</span>
           </div>
         </div>
 
@@ -151,8 +183,8 @@
               <input type="tel" id="auth-phone" required placeholder="234 567 8900" autocomplete="tel" style="flex:1; height: 50px">
             </div>
           </div>
-          <button type="submit" id="auth-phone-submit" class="btn btn-primary" style="width:100%; height:50px;">Initialize Link →</button>
-          <div class="auth-footer-text">Encrypted token request sent via official Telegram API.</div>
+          <button type="submit" id="auth-phone-submit" class="btn btn-primary" style="width:100%; height:50px;">Send Code →</button>
+          <div class="auth-footer-text">A verification code will be sent to your Telegram app.</div>
         </form>
 
         <!-- Step 2: OTP Verification Code (Only for Phone Flow) -->
@@ -165,9 +197,9 @@
             <label for="auth-password">🔒 2FA Password</label>
             <input type="password" id="auth-password" placeholder="Enter your 2FA password" style="height:50px;">
           </div>
-          <button type="submit" id="auth-code-submit" class="btn btn-primary" style="width:100%; height:50px;">Verify Identity →</button>
-          <button type="button" id="auth-back-btn" class="btn btn-ghost mt-24" style="width:100%; height:40px;">← Cancel Link</button>
-          <div class="auth-footer-text">Enter the secure code sent to your Telegram app.</div>
+          <button type="submit" id="auth-code-submit" class="btn btn-primary" style="width:100%; height:50px;">Confirm & Login →</button>
+          <button type="button" id="auth-back-btn" class="btn btn-ghost mt-24" style="width:100%; height:40px;">← Change Number</button>
+          <div class="auth-footer-text">Enter the code sent to your Telegram app. Check your messages.</div>
         </form>
       </div>
     </div>
@@ -176,14 +208,11 @@
   <div class="toast-container" id="toast-container"></div>
 
   <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="assets/qrcode.min.js"></script>
   <script src="js/countries.js"></script>
   <script src="js/app.js"></script>
   <script src="js/dashboard.js"></script>
-  <script src="js/chats.js"></script>
-  <script src="js/discovery.js"></script>
   <script src="js/broadcast.js"></script>
   <script src="js/settings.js"></script>
-  <script src="js/webscout.js"></script>
 </body>
 </html>

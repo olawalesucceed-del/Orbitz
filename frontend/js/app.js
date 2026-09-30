@@ -2,7 +2,7 @@
  * Scoutrix — Main App Router & Shared Utilities
  */
 
-const API = 'https://orbitz.onrender.com'; 
+const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : (window.location.hostname === 'localhost' ? '' : 'https://orbitz.onrender.com');
 
 function getFullAvatarUrl(path) {
     if (!path) return null;
@@ -21,9 +21,6 @@ let loginPhoneNumber = null;
 // ─── Router ────────────────────────────────────────────────────────────────
 const pages = {
   dashboard: () => window.renderDashboard,
-  chats:     () => window.renderChats,
-  discovery: () => window.renderDiscovery,
-  webscout:  () => window.renderWebScout,
   broadcast: () => window.renderBroadcast,
   settings:  () => window.renderSettings,
 };
@@ -136,18 +133,8 @@ function handleWSMessage(msg) {
       addActivityItem({ icon: '✅', text: `Scan complete: ${msg.new_leads} new leads`, class: 'success' });
       refreshCurrentPage();
       break;
-    case 'web_scout_started':
-      showToast(`🌐 Web Scout scanning ${msg.subreddits?.length || 0} sources...`, 'info');
-      addActivityItem({ icon: '🌐', text: `Web Scout started across ${msg.subreddits?.length || 0} subreddits`, class: '' });
-      break;
-    case 'web_scout_complete':
-      showToast(`🌐 Web Scout done! ${msg.new_leads} buyers imported.`, 'success');
-      addActivityItem({ icon: '🌐', text: `Web Scout: ${msg.signals} signals, ${msg.new_leads} leads`, class: 'success' });
-      if (window._webScoutRefresh) window._webScoutRefresh();
-      refreshCurrentPage();
-      break;
     case 'flood_wait':
-      showToast(`⚠️ Rate limit encountered. Throttling for ${msg.seconds}s.`, 'warning');
+      showToast(`⚠️ Rate limit hit. Cooling down for ${msg.seconds}s.`, 'warning');
       break;
   }
 }
@@ -155,7 +142,6 @@ function handleWSMessage(msg) {
 function refreshCurrentPage() {
   const page = window.location.hash.replace('#', '') || 'dashboard';
   if (page === 'dashboard' && window._dashboardRefresh) window._dashboardRefresh();
-  if (page === 'leads' && window._leadsRefresh) window._leadsRefresh();
 }
 
 function addActivityItem({ icon, text, class: cls }) {
@@ -214,23 +200,45 @@ function showAuth() {
     document.getElementById('auth-code-form').style.display = 'none';
     document.getElementById('auth-qr-section').style.display = 'block';
     
-    // Reset Tabs
-    document.getElementById('tab-qr').style.background = 'rgba(59,130,246,0.2)';
-    document.getElementById('tab-qr').style.color = 'white';
-    document.getElementById('tab-phone').style.background = 'transparent';
-    document.getElementById('tab-phone').style.color = 'var(--text-secondary)';
+    // Play/replay the ocean ship video
+    const video = overlay.querySelector('video');
+    if (video) {
+      video.currentTime = 0;
+      video.play().catch(() => {});
+    }
+
+    // Reset Tabs for Light Theme
+    const tabQr = document.getElementById('tab-qr');
+    const tabPhone = document.getElementById('tab-phone');
+    if (tabQr && tabPhone) {
+        tabQr.style.background = '#ffffff';
+        tabQr.style.color = '#0f172a';
+        tabQr.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+        tabPhone.style.background = 'transparent';
+        tabPhone.style.color = '#64748b';
+        tabPhone.style.boxShadow = 'none';
+    }
     
-    initParticleAnimation();
     startQrFlow();
   }
 }
 
-function logout() {
-  localStorage.removeItem('token');
+window.logout = function logout() {
+  try {
+    localStorage.removeItem('token');
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch(e) {}
+
   currentToken = null;
-  if(qrPollInterval) clearInterval(qrPollInterval);
-  showAuth();
-}
+  if (qrPollInterval) {
+    clearInterval(qrPollInterval);
+    qrPollInterval = null;
+  }
+
+  // Immediately redirect to clean root URL (login screen)
+  window.location.replace(window.location.origin + '/');
+};
 
 // ─── Dual Auth Tabs ─────────────────────────────────────────────────────────
 document.getElementById('tab-qr')?.addEventListener('click', () => {
@@ -238,10 +246,14 @@ document.getElementById('tab-qr')?.addEventListener('click', () => {
     document.getElementById('auth-phone-form').style.display = 'none';
     document.getElementById('auth-code-form').style.display = 'none';
     
-    document.getElementById('tab-qr').style.background = 'rgba(59,130,246,0.2)';
-    document.getElementById('tab-qr').style.color = 'white';
-    document.getElementById('tab-phone').style.background = 'transparent';
-    document.getElementById('tab-phone').style.color = 'var(--text-secondary)';
+    const tabQr = document.getElementById('tab-qr');
+    const tabPhone = document.getElementById('tab-phone');
+    tabQr.style.background = '#ffffff';
+    tabQr.style.color = '#0f172a';
+    tabQr.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+    tabPhone.style.background = 'transparent';
+    tabPhone.style.color = '#64748b';
+    tabPhone.style.boxShadow = 'none';
     
     startQrFlow();
 });
@@ -251,10 +263,14 @@ document.getElementById('tab-phone')?.addEventListener('click', () => {
     document.getElementById('auth-phone-form').style.display = 'block';
     document.getElementById('auth-code-form').style.display = 'none';
     
-    document.getElementById('tab-phone').style.background = 'rgba(59,130,246,0.2)';
-    document.getElementById('tab-phone').style.color = 'white';
-    document.getElementById('tab-qr').style.background = 'transparent';
-    document.getElementById('tab-qr').style.color = 'var(--text-secondary)';
+    const tabQr = document.getElementById('tab-qr');
+    const tabPhone = document.getElementById('tab-phone');
+    tabPhone.style.background = '#ffffff';
+    tabPhone.style.color = '#0f172a';
+    tabPhone.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+    tabQr.style.background = 'transparent';
+    tabQr.style.color = '#64748b';
+    tabQr.style.boxShadow = 'none';
     
     if(qrPollInterval) clearInterval(qrPollInterval);
 });
@@ -266,13 +282,17 @@ async function startQrFlow() {
     const loader = document.getElementById('qr-loader');
     if(!container) return;
     
-    container.innerHTML = '<div class="spinner" style="width:32px;height:32px;border-width:3px"></div>';
-    loader.style.display = 'none';
+    container.innerHTML = '<div class="spinner" style="width:32px;height:32px;border-width:3px;border-top-color:#3b82f6;"></div>';
+    if(loader) loader.style.display = 'none';
     
     try {
         const res = await apiFetch('/auth/qr/start', { method: 'POST' });
         if(res && res.success) {
             container.innerHTML = '';
+            if(typeof QRCode === 'undefined') {
+                container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:10px;">QR library failed to load.<br>Please refresh the page.</div>';
+                return;
+            }
             new QRCode(container, {
                 text: res.url,
                 width: 200,
@@ -282,16 +302,17 @@ async function startQrFlow() {
                 correctLevel : QRCode.CorrectLevel.H
             });
             currentQrToken = res.token_id;
-            loader.style.display = 'flex';
+            if(loader) loader.style.display = 'flex';
             
             // Start Polling
             qrPollInterval = setInterval(pollQrStatus, 2000);
         } else {
-            container.innerHTML = '<div style="color:var(--danger); font-size:12px;">Failed to generate QR</div>';
-            showToast(res?.detail || res?.error || 'QR generation failed', 'error');
+            const errMsg = res?.detail || res?.error || 'QR generation failed';
+            container.innerHTML = `<div style="color:#ef4444;font-size:13px;padding:10px;text-align:center;">${errMsg}<br><br><button onclick="startQrFlow()" style="padding:8px 16px;background:#0f172a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">Retry</button></div>`;
+            showToast(errMsg, 'error');
         }
     } catch(e) {
-        container.innerHTML = '<div style="color:var(--danger); font-size:12px;">Network Error</div>';
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:10px;text-align:center;">Cannot connect to server.<br>Make sure the backend is running.<br><br><button onclick="startQrFlow()" style="padding:8px 16px;background:#0f172a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;">Retry</button></div>';
     }
 }
 
@@ -304,8 +325,9 @@ async function pollQrStatus() {
             localStorage.setItem('token', res.access_token);
             currentToken = res.access_token;
             document.getElementById('auth-overlay').style.display = 'none';
-            showToast('QR Login successful! Welcome to Scoutrix.', 'success');
+            showToast('Login successful! Welcome to Scoutrix.', 'success');
             navigate('dashboard');
+            setTimeout(show2027AdvisoryModal, 400);
         } else if (res && (res.status === 'timeout' || res.status === 'failed')) {
             clearInterval(qrPollInterval);
             showToast('QR Login expired or failed. Generating a new one...', 'warning');
@@ -354,7 +376,7 @@ document.getElementById('auth-phone-form')?.addEventListener('submit', async (e)
     showToast('Network error while requesting code.', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Send Login Code →';
+    btn.textContent = 'Send Code →';
   }
 });
 
@@ -390,6 +412,7 @@ document.getElementById('auth-code-form')?.addEventListener('submit', async (e) 
       document.getElementById('auth-overlay').style.display = 'none';
       showToast('Login successful! Welcome to Scoutrix.', 'success');
       navigate('dashboard');
+      setTimeout(show2027AdvisoryModal, 400);
     } else {
       const errorMsg = (res?.detail || res?.error || '').toLowerCase();
       if (errorMsg.includes('2fa') || errorMsg.includes('two-step') || errorMsg.includes('password is required')) {
@@ -403,7 +426,7 @@ document.getElementById('auth-code-form')?.addEventListener('submit', async (e) 
     showToast('Network error during verification.', 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Verify & Login →';
+    btn.textContent = 'Confirm & Login →';
   }
 });
 
@@ -412,6 +435,21 @@ document.getElementById('auth-back-btn')?.addEventListener('click', () => {
     document.getElementById('auth-phone-form').style.display = 'block';
     document.getElementById('auth-password-group').style.display = 'none';
 });
+
+// ─── 2027 Commercial Advisory Modal ──────────────────────────────────────────
+window.show2027AdvisoryModal = function() {
+  const modal = document.getElementById('billing-advisory-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+
+  const btn = document.getElementById('btn-ack-advisory');
+  if (btn) {
+    btn.onclick = () => {
+      modal.style.display = 'none';
+      sessionStorage.setItem('advisory_2027_shown', 'true');
+    };
+  }
+};
 
 // ─── Init ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
@@ -430,25 +468,21 @@ document.addEventListener('DOMContentLoaded', () => {
   // Global helper for other modules
   window.getActiveAccountId = () => {
     const list = document.getElementById('settings-account-list');
-    if (list && list.value) return list.value;
-    
-    const discSelect = document.getElementById('disc-acc-select');
-    if (discSelect && discSelect.value) return discSelect.value;
-
-    const broadSelect = document.getElementById('broadcast-acc-select');
-    if (broadSelect && broadSelect.value) return broadSelect.value;
-    
-    // Fallback to localStorage
+    if (list && list.value) return parseInt(list.value);
     const last = localStorage.getItem('last_active_account');
     if (last) return parseInt(last);
-    
     return null;
   };
 
-  document.getElementById('logout-btn')?.addEventListener('click', logout);
 
-  if (currentToken) navigate(window.location.hash.replace('#', '') || 'dashboard');
-  else showAuth();
+  if (currentToken) {
+    navigate(window.location.hash.replace('#', '') || 'dashboard');
+    if (sessionStorage.getItem('advisory_2027_shown') !== 'true') {
+      setTimeout(show2027AdvisoryModal, 500);
+    }
+  } else {
+    showAuth();
+  }
 
   connectWS();
   initParticleAnimation(); 

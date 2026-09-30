@@ -13,6 +13,9 @@ backend/.env
 # Database
 backend/*.db
 
+# Media & avatar caches
+frontend/cache/
+
 # OS
 .DS_Store
 Thumbs.db

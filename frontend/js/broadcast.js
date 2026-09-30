@@ -1,145 +1,149 @@
 /**
- * Broadcast Page — Drafting and sending messages to all joined groups
+ * Scoutrix — Broadcast Page
+ * Send a message to all groups joined by the selected Telegram account.
  */
 
-function renderBroadcast(container) {
+window.renderBroadcast = function(container) {
   container.innerHTML = `
-    <div class="page-header flex-between" style="align-items:flex-end">
-      <div>
-        <h1 class="page-title">📢 Broadcast Intelligence</h1>
-        <p class="page-subtitle">Multi-account global messaging to all active Telegram communities</p>
-      </div>
-      <div id="broadcast-account-picker" style="margin-bottom:10px">
-        <!-- Account selector injected here -->
-      </div>
-    </div>
+    <div style="max-width:900px;margin:0 auto;">
 
-    <div class="grid-2">
-      <!-- Broadcast Console -->
-      <div class="card" style="display:flex; flex-direction:column; justify-content: space-between">
+      <!-- Header -->
+      <div style="margin-bottom:28px;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
         <div>
-          <div class="card-title">📝 COMPOSE TRANSMISSION</div>
-          <div class="form-group mb-16">
-            <label>Message Content (AI Optimized)</label>
-            <textarea id="broadcast-content" rows="10" placeholder="Type your strategic broadcast message here..."></textarea>
-          </div>
-          
-          <div class="card" style="background:rgba(59, 130, 246, 0.05); border:1px solid rgba(59, 130, 246, 0.1); padding:16px; margin-bottom: 24px">
-            <p style="font-size:13px; color:var(--text-secondary); line-height: 1.6">
-                <strong style="color:var(--accent-primary)">Attention:</strong> Transmission will be delivered to <span style="color:var(--text-white); font-weight:700">ALL</span> joined groups associated with this account.
-            </p>
-          </div>
+          <h1 style="font-size:26px;font-weight:800;color:#0f172a;margin:0;">📢 Group Broadcast</h1>
+          <p style="font-size:14px;color:#64748b;margin:6px 0 0 0;">Send announcements to all groups joined by your Telegram account.</p>
         </div>
-
-        <button class="btn btn-primary btn-lg" id="btn-do-broadcast" style="width:100%">
-          🚀 INITIATE BROADCAST
-        </button>
+        <div id="broadcast-account-picker"></div>
       </div>
 
-      <!-- Real-time Transmission Logs -->
-      <div class="card">
-        <div class="card-title">📋 TRANSMISSION LOGS</div>
-        <div class="activity-feed" id="broadcast-activity" style="max-height: 440px; overflow-y: auto;">
-          <div class="empty-state">
-            <span class="icon">📡</span>
-            <p>Ready for deployment. Select an account to view previous transmission logs.</p>
+      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:24px;">
+
+        <!-- Composer -->
+        <div class="card" style="border:none;box-shadow:0 4px 20px rgba(0,0,0,0.05);border-radius:16px;display:flex;flex-direction:column;">
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:16px;">✏️ Compose Message</div>
+
+          <textarea id="broadcast-content" rows="10"
+            placeholder="Write your broadcast message here...&#10;&#10;You can include links, announcements, or promotional text."
+            style="resize:vertical;font-size:14px;line-height:1.6;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;width:100%;box-sizing:border-box;outline:none;font-family:inherit;"></textarea>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;margin-bottom:18px;">
+            <span style="font-size:12px;color:#94a3b8;">Standard Telegram formatting supported</span>
+            <span id="char-count" style="font-size:12px;font-weight:600;color:#64748b;">0 characters</span>
+          </div>
+
+          <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px 14px;margin-bottom:18px;font-size:13px;color:#1e40af;line-height:1.5;">
+            ℹ️ This message will be sent to <strong>all groups</strong> your selected account is currently a member of.
+          </div>
+
+          <button class="btn btn-primary" id="btn-do-broadcast" style="width:100%;height:46px;font-size:15px;font-weight:700;border-radius:12px;margin-top:auto;">
+            🚀 Send Broadcast
+          </button>
+        </div>
+
+        <!-- History / Logs -->
+        <div class="card" style="border:none;box-shadow:0 4px 20px rgba(0,0,0,0.05);border-radius:16px;">
+          <div style="font-size:15px;font-weight:700;color:#0f172a;margin-bottom:16px;">📋 Broadcast History</div>
+          <div id="broadcast-activity" style="max-height:420px;overflow-y:auto;">
+            <div style="padding:48px 20px;text-align:center;color:#94a3b8;">
+              <div style="font-size:36px;margin-bottom:10px;opacity:0.5;">📢</div>
+              <div style="font-size:13px;font-weight:600;">No broadcasts sent yet</div>
+              <p style="font-size:12px;margin-top:4px;">Your broadcast history will appear here.</p>
+            </div>
           </div>
         </div>
+
       </div>
     </div>
   `;
 
-  // --- Logic ---
-  const accPicker = container.querySelector('#broadcast-account-picker');
-  const btnLaunch = container.querySelector('#btn-do-broadcast');
-  const textarea = container.querySelector('#broadcast-content');
-  const activityFeed = container.querySelector('#broadcast-activity');
-
+  const picker    = container.querySelector('#broadcast-account-picker');
+  const btnSend   = container.querySelector('#btn-do-broadcast');
+  const textarea  = container.querySelector('#broadcast-content');
+  const charCount = container.querySelector('#char-count');
+  const activity  = container.querySelector('#broadcast-activity');
   let activeAccountId = null;
 
+  textarea.addEventListener('input', () => {
+    charCount.textContent = `${textarea.value.length} characters`;
+  });
+
+  // Load accounts into picker
   async function loadAccounts() {
     const accounts = await apiFetch('/auth/accounts');
-    if (Array.isArray(accounts) && accounts.length > 0) {
-      accPicker.innerHTML = `
-        <div class="form-group" style="margin:0">
-        <select id="broadcast-acc-select" style="width:200px">
-          ${accounts.map(a => `<option value="${a.id}">${a.session_name} (@${a.phone})</option>`).join('')}
-        </select>
-        </div>
-      `;
-      activeAccountId = accounts[0].id;
-      accPicker.querySelector('select').addEventListener('change', (e) => {
-        activeAccountId = e.target.value;
-        loadBroadcastHistory();
-      });
-      loadBroadcastHistory();
-    } else {
-      accPicker.innerHTML = '<span style="color:var(--danger); font-size:12px">No Accounts Connected</span>';
-      btnLaunch.disabled = true;
+    if (!Array.isArray(accounts) || accounts.length === 0) {
+      picker.innerHTML = `<span style="font-size:12px;font-weight:600;color:#ef4444;">⚠ No accounts connected. Go to Settings first.</span>`;
+      btnSend.disabled = true;
+      return;
     }
+    picker.innerHTML = `
+      <select id="broadcast-acc-select" style="padding:9px 14px;border-radius:10px;border:1.5px solid #e2e8f0;font-size:14px;font-weight:600;background:#fff;min-width:200px;">
+        ${accounts.map(a => `<option value="${a.id}">${a.session_name} (${a.phone || 'Active'})</option>`).join('')}
+      </select>`;
+    activeAccountId = accounts[0].id;
+    localStorage.setItem('last_active_account', activeAccountId);
+    picker.querySelector('select').addEventListener('change', (e) => {
+      activeAccountId = parseInt(e.target.value);
+      localStorage.setItem('last_active_account', activeAccountId);
+      loadHistory();
+    });
+    loadHistory();
   }
 
-  async function loadBroadcastHistory() {
-    if (!activeAccountId) return;
-    
-    activityFeed.innerHTML = '<div style="display:flex; justify-content:center; padding:40px"><div class="spinner"></div></div>';
-    
-    const data = await apiFetch('/dashboard/summary'); 
-    if (data && data.recent_logs) {
-      const broadcastLogs = data.recent_logs.filter(l => l.action_type === 'broadcast' || l.action_type === 'error');
-      activityFeed.innerHTML = broadcastLogs.length > 0 ? '' : '<div class="empty-state"><p>No recent broadcasts for this account.</p></div>';
-      broadcastLogs.forEach(l => {
-        const item = document.createElement('div');
-        item.className = `activity-item ${l.success ? '' : 'error'}`;
-        item.innerHTML = `
-          <span class="activity-icon">${l.action_type === 'broadcast' ? '📢' : '❌'}</span>
-          <span class="activity-text">${l.detail}</span>
-          <span class="activity-time">${timeAgo(l.timestamp)}</span>
-        `;
-        activityFeed.appendChild(item);
-      });
-    } else {
-        activityFeed.innerHTML = '<div class="empty-state"><p>Stats inaccessible.</p></div>';
+  // Load broadcast history from activity logs
+  async function loadHistory() {
+    activity.innerHTML = `<div style="display:flex;justify-content:center;padding:40px;"><div class="spinner" style="border-top-color:#3b82f6;"></div></div>`;
+    const data = await apiFetch('/dashboard/stats');
+    if (data && data.recent_activity && data.recent_activity.length > 0) {
+      const logs = data.recent_activity.filter(l => l.action === 'broadcast' || l.action === 'message');
+      if (logs.length > 0) {
+        activity.innerHTML = logs.map(l => `
+          <div class="activity-item ${l.success ? '' : 'error'}" style="margin-bottom:4px;">
+            <span class="activity-icon">${l.action === 'broadcast' ? '📢' : '📨'}</span>
+            <span class="activity-text">${escapeHtml(l.detail)}</span>
+            <span class="activity-time">${timeAgo(l.timestamp)}</span>
+          </div>`).join('');
+        return;
+      }
     }
+    activity.innerHTML = `
+      <div style="padding:40px 20px;text-align:center;color:#94a3b8;">
+        <div style="font-size:32px;margin-bottom:8px;opacity:0.5;">📢</div>
+        <div style="font-size:13px;font-weight:600;">No broadcast history yet</div>
+      </div>`;
   }
 
-  btnLaunch.addEventListener('click', async () => {
+  // Send broadcast
+  btnSend.addEventListener('click', async () => {
     const msg = textarea.value.trim();
-    if (!msg) {
-      showToast('Transmission requires content.', 'warning');
-      return;
-    }
+    if (!msg) { showToast('Please write a message before broadcasting.', 'warning'); textarea.focus(); return; }
+    if (!activeAccountId) { showToast('Please select a Telegram account.', 'error'); return; }
 
-    if (!activeAccountId) {
-      showToast('Target account required.', 'error');
-      return;
-    }
+    btnSend.disabled = true;
+    btnSend.innerHTML = '<div class="spinner" style="width:16px;height:16px;display:inline-block;margin-right:8px;border-top-color:#fff;vertical-align:middle;"></div> Broadcasting...';
+    showToast('🚀 Sending broadcast...', 'info');
 
-    btnLaunch.disabled = true;
-    btnLaunch.innerHTML = '<div class="spinner" style="width:18px;height:18px;margin-right:10px"></div> DEPLOYING...';
-    showToast('🚀 Broadcast sequence initiated.', 'info');
-
-    const res = await apiFetch('/commands/execute', {
+    const res = await apiFetch('/settings/broadcast', {
       method: 'POST',
-      body: JSON.stringify({
-        account_id: activeAccountId,
-        text: `Broadcast to groups: ${msg}`
-      })
+      body: JSON.stringify({ account_id: activeAccountId, message: msg })
     });
 
-    btnLaunch.disabled = false;
-    btnLaunch.innerHTML = '🚀 INITIATE BROADCAST';
+    btnSend.disabled = false;
+    btnSend.innerHTML = '🚀 Send Broadcast';
 
-    if (res.status || res.success) {
-      showToast(res.status || 'Broadcast complete!', 'success');
+    if (res && res.success) {
+      showToast(res.message || '✅ Broadcast sent successfully!', 'success');
       textarea.value = '';
-      setTimeout(loadBroadcastHistory, 2000);
+      charCount.textContent = '0 characters';
+      setTimeout(loadHistory, 1500);
     } else {
-      showToast(res.error || 'Transmission failed.', 'error');
+      showToast(res?.error || res?.detail || 'Broadcast failed. Check your Telegram connection.', 'error');
     }
   });
 
   loadAccounts();
-}
+};
 
-window.renderBroadcast = renderBroadcast;
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
