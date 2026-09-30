@@ -69,7 +69,7 @@ app.include_router(settings.router)
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     ws_clients.append(websocket)
-    await websocket.send_text(json.dumps({"type": "connected", "message": "Connected to IPTV Scout live feed"}))
+    await websocket.send_text(json.dumps({"type": "connected", "message": "Connected to Scoutrix live feed"}))
     try:
         while True:
             data = await websocket.receive_text()

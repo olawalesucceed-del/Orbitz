@@ -2,7 +2,7 @@
  * Scoutrix — Main App Router & Shared Utilities
  */
 
-const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : (window.location.hostname === 'localhost' ? '' : 'https://orbitz.onrender.com');
+const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : (window.location.hostname === 'localhost' ? '' : 'https://scoutrix.onrender.com');
 
 function getFullAvatarUrl(path) {
     if (!path) return null;

@@ -566,11 +566,6 @@ input::placeholder { color: var(--text-muted); }
 .auth-card .btn-ghost { color: #475569; }
 .auth-card .btn-ghost:hover { background: #f1f5f9; color: #0f172a; }
 
-@media (max-width: 768px) {
-  .auth-overlay { flex-direction: column; }
-  .auth-bg-gradient { display: none; }
-  .auth-card { max-width: 100%; padding: 40px 24px; }
-}
 
 /* ============================================================ TOASTS */
 .toast-container {
@@ -601,6 +596,18 @@ input::placeholder { color: var(--text-muted); }
 .toast.success { border-left-color: #10b981; }
 .toast.error { border-left-color: #ef4444; }
 .toast.warning { border-left-color: #f59e0b; }
+
+/* ============================================================ TOP BAR BUTTONS */
+.top-bar button:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+#btn-ack-advisory:hover {
+  background: #1e293b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(15,23,42,0.3) !important;
+}
 
 /* ============================================================ UTILS */
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
