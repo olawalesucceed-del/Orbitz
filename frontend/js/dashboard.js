@@ -63,7 +63,7 @@ window.renderDashboard = function(container) {
       </div>
 
       <!-- Main Operational Deck: Activity & Volume -->
-      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:20px;">
+      <div class="responsive-grid-deck" style="gap:20px;">
         
         <!-- Live Audit Activity Feed -->
         <div class="card" style="padding:22px;border-radius:14px;border:1px solid #e2e8f0;background:#ffffff;box-shadow:0 1px 3px rgba(0,0,0,0.04);">

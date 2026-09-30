@@ -52,7 +52,7 @@ window.renderSettings = function(container) {
           </select>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+        <div class="responsive-grid-2" style="margin-bottom:20px;">
           <!-- Targeting -->
           <div style="background:#f0fdf4;border-radius:12px;padding:18px;border:1px solid #bbf7d0;">
             <div style="font-size:14px;font-weight:700;color:#15803d;margin-bottom:14px;">🎯 Niche & Keywords</div>
@@ -90,7 +90,7 @@ window.renderSettings = function(container) {
         <div style="background:#f5f3ff;border-radius:12px;padding:18px;border:1px solid #ddd6fe;margin-bottom:20px;">
           <div style="font-size:14px;font-weight:700;color:#6d28d9;margin-bottom:4px;">📝 Outreach Templates</div>
           <div style="font-size:12px;color:#7c3aed;margin-bottom:14px;">The system rotates between these when messaging leads.</div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px;">
+          <div class="responsive-grid-3" style="margin-bottom:14px;">
             <div>
               <label style="font-size:12px;font-weight:600;color:#374151;display:block;margin-bottom:4px;">Variation A</label>
               <textarea id="template1" rows="4" placeholder="Hi! Saw your question in the group and wanted to reach out..." style="width:100%;background:#fff;border:1px solid #ddd6fe;border-radius:8px;padding:10px;font-size:13px;resize:none;box-sizing:border-box;"></textarea>

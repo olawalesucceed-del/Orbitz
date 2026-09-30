@@ -16,7 +16,7 @@ window.renderBroadcast = function(container) {
         <div id="broadcast-account-picker"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:24px;">
+      <div class="responsive-grid-deck" style="gap:24px;">
 
         <!-- Composer -->
         <div class="card" style="border:none;box-shadow:0 4px 20px rgba(0,0,0,0.05);border-radius:16px;display:flex;flex-direction:column;">
