@@ -696,16 +696,19 @@ input::placeholder { color: var(--text-muted); }
   .top-bar-title {
     font-size: 13px !important;
   }
+  /* Keep side-by-side on mobile — video left, form right */
   .auth-overlay {
-    flex-direction: column !important;
-    overflow-y: auto !important;
+    flex-direction: row !important;
+    overflow: hidden !important;
+    height: 100vh !important;
   }
   .auth-bg-gradient {
-    height: 220px !important;
-    flex: none !important;
+    flex: 0 0 38% !important;
+    width: 38% !important;
+    height: 100% !important;
     display: block !important;
-    width: 100% !important;
     position: relative !important;
+    min-width: 120px !important;
   }
   .auth-bg-gradient video {
     position: absolute !important;
@@ -716,19 +719,32 @@ input::placeholder { color: var(--text-muted); }
     display: block !important;
   }
   .auth-image-overlay {
-    padding: 24px 20px !important;
+    padding: 16px 12px !important;
+    justify-content: flex-end !important;
   }
   .overlay-brand {
-    font-size: 24px !important;
+    font-size: 16px !important;
+    letter-spacing: 0.06em !important;
   }
   .overlay-text {
-    font-size: 13px !important;
-    max-width: 100% !important;
+    display: none !important;
   }
   .auth-card {
-    max-width: 100% !important;
-    padding: 32px 20px !important;
+    flex: 1 !important;
+    max-width: 62% !important;
+    width: 62% !important;
+    padding: 24px 18px !important;
     box-shadow: none !important;
+    overflow-y: auto !important;
+    justify-content: flex-start !important;
+    padding-top: 32px !important;
+  }
+  .auth-card h2 {
+    font-size: 22px !important;
+  }
+  .auth-sub {
+    font-size: 13px !important;
+    margin-bottom: 20px !important;
   }
 }
 
