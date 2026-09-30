@@ -2,7 +2,7 @@
  * Scoutrix — Main App Router & Shared Utilities
  */
 
-const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : (window.location.hostname === 'localhost' ? '' : 'https://scoutrix.onrender.com');
+const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
 
 function getFullAvatarUrl(path) {
     if (!path) return null;
@@ -27,6 +27,13 @@ const pages = {
 
 function navigate(page) {
   if (!currentToken) { showAuth(); return; }
+
+  const hb = document.getElementById('hamburger');
+  if (hb) hb.style.display = '';
+  const topBar = document.getElementById('top-bar');
+  if (topBar) topBar.style.display = '';
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar) sidebar.style.display = '';
 
   // Update nav highlight
   document.querySelectorAll('.nav-item').forEach(el =>
@@ -199,7 +206,15 @@ function showAuth() {
     document.getElementById('auth-phone-form').style.display = 'none';
     document.getElementById('auth-code-form').style.display = 'none';
     document.getElementById('auth-qr-section').style.display = 'block';
+
+    const hb = document.getElementById('hamburger');
+    if (hb) hb.style.display = 'none';
+    const topBar = document.getElementById('top-bar');
+    if (topBar) topBar.style.display = 'none';
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) sidebar.style.display = 'none';
     
+
     // Play/replay the ocean ship video — mobile-safe
     const video = overlay.querySelector('video');
     if (video) {

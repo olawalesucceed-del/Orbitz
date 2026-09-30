@@ -78,6 +78,7 @@
         <!-- Pages injected by JS -->
         <div id="page-container"></div>
       </main>
+    </div> <!-- Close main-wrapper -->
 
     <!-- ═══════════ 2027 SUBSCRIPTION ADVISORY MODAL ═══════════ -->
     <div id="billing-advisory-modal" style="display:none; position:fixed; inset:0; z-index:3000; background:rgba(15,23,42,0.7); backdrop-filter:blur(8px); align-items:center; justify-content:center; padding:20px; animation:fadeIn 0.25s ease;">
@@ -157,11 +158,11 @@
 
         <!-- Step 1A: QR Code Login -->
         <div id="auth-qr-section" style="text-align:left;">
-          <div style="background:white; padding:24px; border:1px solid #e2e8f0; border-radius:12px; display:inline-block; margin-bottom:20px;">
-            <div id="qr-code-container"></div>
+          <div style="background:white; padding:20px; border:1px solid #e2e8f0; border-radius:12px; display:inline-flex; align-items:center; justify-content:center; margin-bottom:16px; min-width:240px; min-height:240px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            <div id="qr-code-container" style="width:200px; height:200px; display:flex; align-items:center; justify-content:center;"></div>
           </div>
-          <div class="auth-footer-text" style="margin-top:0;">Open Telegram app on your phone.<br/>Go to <b>Settings > Devices > Link Desktop Device</b><br/>and scan this code.</div>
-          <div id="qr-loader" style="margin-top:20px; display:flex; justify-content:flex-start; align-items:center; gap:8px;">
+          <div class="auth-footer-text" style="margin-top:0;">Open Telegram on your phone.<br/>Go to <b>Settings > Devices > Link Desktop Device</b><br/>and scan this code.</div>
+          <div id="qr-loader" style="margin-top:14px; display:flex; justify-content:flex-start; align-items:center; gap:8px;">
              <div class="spinner" style="width:16px; height:16px; border-width:2px; border-top-color:#3b82f6;"></div>
              <span style="font-size:13px; color:#64748b; font-weight:500;">Waiting for scan...</span>
           </div>

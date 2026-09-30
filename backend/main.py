@@ -39,6 +39,7 @@ async def lifespan(app: FastAPI):
     create_tables()
     start_scheduler()
     tc.broadcast_callback = broadcast_to_all
+    asyncio.create_task(tc.client_manager.prewarm_qr())
     yield
     # Shutdown
     stop_scheduler()
