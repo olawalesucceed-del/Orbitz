@@ -27,6 +27,9 @@ class TelegramClientManager:
         self.clients: Dict[int, TelegramClient] = {}  # account_id -> TelegramClient
         self.broadcast_callback = None
         self.monitoring_tasks: Dict[int, asyncio.Task] = {}
+        self.qr_status: Dict[str, dict] = {}
+        self._prewarmed_qr = None
+        self._prewarming_lock = asyncio.Lock()
 
     async def db_commit_retry(self, db, max_retries: int = 5, delay: float = 0.5):
         """Helper to commit to DB with retries for SQLite locking."""
