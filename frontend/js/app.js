@@ -2,7 +2,7 @@
  * Scoutrix — Main App Router & Shared Utilities
  */
 
-const API = window.location.protocol === 'file:' ? 'http://localhost:8000' : '';
+const API = window.location.protocol === 'file:' || (window.location.hostname === '127.0.0.1' && window.location.port !== '8000') || (window.location.hostname === 'localhost' && window.location.port !== '8000') ? 'http://localhost:8000' : '';
 
 function getFullAvatarUrl(path) {
     if (!path) return null;
