@@ -704,6 +704,16 @@ input::placeholder { color: var(--text-muted); }
     height: 220px !important;
     flex: none !important;
     display: block !important;
+    width: 100% !important;
+    position: relative !important;
+  }
+  .auth-bg-gradient video {
+    position: absolute !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
   }
   .auth-image-overlay {
     padding: 24px 20px !important;

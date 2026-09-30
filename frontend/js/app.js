@@ -200,11 +200,19 @@ function showAuth() {
     document.getElementById('auth-code-form').style.display = 'none';
     document.getElementById('auth-qr-section').style.display = 'block';
     
-    // Play/replay the ocean ship video
+    // Play/replay the ocean ship video — mobile-safe
     const video = overlay.querySelector('video');
     if (video) {
       video.currentTime = 0;
-      video.play().catch(() => {});
+      video.muted = true;
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Autoplay blocked (e.g. iOS without gesture) — try on first touch
+          const tryPlay = () => { video.play().catch(() => {}); document.removeEventListener('touchstart', tryPlay); };
+          document.addEventListener('touchstart', tryPlay, { once: true });
+        });
+      }
     }
 
     // Reset Tabs for Light Theme

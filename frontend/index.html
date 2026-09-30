@@ -125,8 +125,11 @@
 
     <!-- ═══════════ PREMIUM AUTH OVERLAY ═══════════ -->
     <div id="auth-overlay" class="auth-overlay" style="display:none">
-      <div class="auth-bg-gradient" style="overflow:hidden;">
-        <video autoplay muted loop playsinline class="auth-portrait" style="width:100%; height:100%; object-fit:cover; object-position:center;">
+      <div class="auth-bg-gradient" style="overflow:hidden; background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 40%,#0c2340 100%);">
+        <video autoplay muted loop playsinline preload="auto"
+          class="auth-portrait"
+          style="width:100%; height:100%; object-fit:cover; object-position:center; display:block;"
+          poster="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3C/svg%3E">
           <source src="assets/ocean_ship.mp4" type="video/mp4">
         </video>
         <div class="auth-image-overlay">
