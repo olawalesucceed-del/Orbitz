@@ -83,7 +83,7 @@ class TelegramClientManager:
             logger.error(f"Missing API ID or Hash for account {account_id}")
             return None
 
-        dirname = os.path.dirname(__file__)
+        dirname = "/app/data" if os.path.exists("/app/data") else os.path.dirname(__file__)
         session_path = os.path.join(dirname, f"{account.session_name}.session")
         client = TelegramClient(session_path, api_id, api_hash)
         
@@ -195,7 +195,7 @@ class TelegramClientManager:
                 return
             
             session_name = f"qr_login_{token_id[:8]}"
-            dirname = os.path.dirname(__file__)
+            dirname = "/app/data" if os.path.exists("/app/data") else os.path.dirname(__file__)
             session_path = os.path.join(dirname, f"{session_name}.session")
             client = TelegramClient(session_path, api_id, api_hash)
             
@@ -247,7 +247,7 @@ class TelegramClientManager:
             return {"success": False, "error": "Missing global API ID or Hash"}
             
         session_name = f"qr_login_{token_id[:8]}"
-        dirname = os.path.dirname(__file__)
+        dirname = "/app/data" if os.path.exists("/app/data") else os.path.dirname(__file__)
         session_path = os.path.join(dirname, f"{session_name}.session")
         client = TelegramClient(session_path, api_id, api_hash)
         
@@ -321,7 +321,7 @@ class TelegramClientManager:
             logger.error("Missing global API ID or Hash for direct login")
             return None
 
-        dirname = os.path.dirname(__file__)
+        dirname = "/app/data" if os.path.exists("/app/data") else os.path.dirname(__file__)
         session_path = os.path.join(dirname, f"{session_name}.session")
         client = TelegramClient(session_path, api_id, api_hash)
         
