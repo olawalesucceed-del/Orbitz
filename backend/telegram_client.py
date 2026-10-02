@@ -171,22 +171,11 @@ class TelegramClientManager:
     qr_status: Dict[str, dict] = {}
 
     async def prewarm_qr(self):
-        """Pre-connects and generates a QR in advance so /auth/qr/start is instant."""
+        """Pre-connects a client in advance so /auth/qr/start is instant."""
         import time, uuid
         async with self._prewarming_lock:
-            if self._prewarmed_qr and (time.time() - self._prewarmed_qr.get("created_at", 0) < 45):
+            if self._prewarmed_qr:
                 return
-            
-            # Clean up old prewarmed client if any
-            if self._prewarmed_qr and "client" in self._prewarmed_qr:
-                try:
-                    await self._prewarmed_qr["client"].disconnect()
-                    sess_path = self._prewarmed_qr.get("session_path")
-                    if sess_path and os.path.exists(sess_path):
-                        os.remove(sess_path)
-                except Exception:
-                    pass
-                self._prewarmed_qr = None
             
             token_id = str(uuid.uuid4())
             api_id = int(os.getenv("TELEGRAM_API_ID", 0))
@@ -201,19 +190,15 @@ class TelegramClientManager:
             
             try:
                 await client.connect()
-                qr = await client.qr_login()
                 self._prewarmed_qr = {
                     "token_id": token_id,
                     "session_name": session_name,
                     "session_path": session_path,
-                    "client": client,
-                    "qr": qr,
-                    "url": qr.url,
-                    "created_at": time.time()
+                    "client": client
                 }
-                logger.info(f"Pre-warmed QR ready: {token_id}")
+                logger.info(f"Pre-warmed QR connection ready: {token_id}")
             except Exception as e:
-                logger.error(f"Failed to prewarm QR: {e}")
+                logger.error(f"Failed to prewarm QR connection: {e}")
                 try:
                     await client.disconnect()
                 except Exception:
@@ -221,22 +206,26 @@ class TelegramClientManager:
 
     async def request_qr_login(self) -> dict:
         """Starts a QR login flow and returns the tracking token and URL."""
-        import time, uuid
-        candidate = None
-        if self._prewarmed_qr and (time.time() - self._prewarmed_qr.get("created_at", 0) < 45):
-            candidate = self._prewarmed_qr
-            self._prewarmed_qr = None
+        import uuid
+        candidate = self._prewarmed_qr
+        self._prewarmed_qr = None
             
         if candidate:
             token_id = candidate["token_id"]
             session_name = candidate["session_name"]
             client = candidate["client"]
-            qr = candidate["qr"]
-            url = candidate["url"]
-            self.qr_status[token_id] = {"status": "pending", "session_name": session_name}
-            asyncio.create_task(self._wait_for_qr(client, qr, token_id, session_name, candidate["session_path"]))
-            asyncio.create_task(self.prewarm_qr())
-            return {"success": True, "token_id": token_id, "url": url}
+            session_path = candidate["session_path"]
+            
+            try:
+                qr = await client.qr_login()
+                self.qr_status[token_id] = {"status": "pending", "session_name": session_name}
+                asyncio.create_task(self._wait_for_qr(client, qr, token_id, session_name, session_path))
+                asyncio.create_task(self.prewarm_qr())
+                return {"success": True, "token_id": token_id, "url": qr.url}
+            except Exception as e:
+                logger.error(f"Failed to fetch QR on prewarmed client: {e}")
+                await client.disconnect()
+                # Fallthrough to standard generation if prewarmed fails
 
         # Fallback if no prewarmed client is ready
         token_id = str(uuid.uuid4())
@@ -255,10 +244,7 @@ class TelegramClientManager:
             await client.connect()
             qr = await client.qr_login()
             
-            # Store initial status
             self.qr_status[token_id] = {"status": "pending", "session_name": session_name}
-            
-            # Spin off background task to wait for scan
             asyncio.create_task(self._wait_for_qr(client, qr, token_id, session_name, session_path))
             asyncio.create_task(self.prewarm_qr())
             return {"success": True, "token_id": token_id, "url": qr.url}
