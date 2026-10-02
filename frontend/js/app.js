@@ -9,6 +9,9 @@ if (window.location.protocol === 'file:') {
     if (window.location.port !== '8000') {
         API = window.location.protocol + '//' + window.location.hostname + ':8000';
     }
+} else {
+    // Production (e.g. Vercel frontend talking to Render backend)
+    API = 'https://scoutrix.onrender.com';
 }
 function getFullAvatarUrl(path) {
     if (!path) return null;
